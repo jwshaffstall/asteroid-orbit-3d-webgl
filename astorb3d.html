@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>astorb 3d</title>
+    <meta name="viewport" content="width=device-width">
+    <style type="text/css">
+        body
+        {
+            font-family: Monospace;
+            background-color: white;
+            color: black;
+            margin: 4px;
+        }
+        h1
+        {
+            margin: 0px;
+        }
+        #astorb3dCanvas
+        {
+            width: 100%;
+            height: 500px;
+            background-color: pink;
+        }
+        #astorbLog
+        {
+            width: 100%;
+            height: 100%;
+            background-color: lightgray;
+        }
+    </style>
+</head>
+<body onload="astorb.onLoadBody()">
+<h1>astorb 3d</h1>
+<canvas id="astorb3dCanvas">
+    Your browser doesn't appear to support the HTML5 <code>&lt;canvas&gt;</code> element.
+</canvas>
+<div id="astorbLog"></div>
+<!-- <script src="scripts/js/libs/sylvester.src.js"></script> -->
+<!-- <script src="scripts/js/libs/glUtils.js"></script> -->
+<script src="scripts/js/libs/gl-matrix-min.js"></script>
+<script src="scripts/js/astorb3d.js"></script>
+<script type="x-shader/x-vertex" id="shader-vs">
+    precision mediump float; // or lowp
+
+    attribute float aSemimajorAxis;
+    attribute float aEccentricity;
+    attribute float aInclination;
+    attribute float aArgumentOfPerihelion;
+    attribute float aLongitudeOfAscendingNode;
+    attribute float aMeanAnomaly;
+
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+    uniform float time; // seconds
+
+    varying float x;
+    varying float y;
+    varying float z;
+
+    void main(void)
+    {
+        float semimajorAxis = aSemimajorAxis;
+        float eccentricity = aEccentricity;
+        float inclination = aInclination;
+        float argumentOfPerihelion = aArgumentOfPerihelion;
+        float longitudeOfAscendingNode = aLongitudeOfAscendingNode;
+        float meanAnomaly = aMeanAnomaly;
+
+        const float pi = 3.1415926535897932384626433832795;
+        const float two_pi = 2.0 * pi;
+
+        const float deg2rad = pi / 180.0;
+
+        float a = semimajorAxis;
+        float e = eccentricity;
+        float i = inclination * deg2rad;
+        float omega = argumentOfPerihelion * deg2rad;
+        float sigma = longitudeOfAscendingNode * deg2rad;
+        float M0 = meanAnomaly * deg2rad;
+
+        const float standardGravitationalParameterSun = 3.96401599E-14; // AU^3/s^2
+        const float muSun = standardGravitationalParameterSun;
+
+        float n = sqrt(muSun / pow(a, 3.0));
+        float M = mod(n * time + M0, two_pi);
+
+        float E = 10.0;
+        const int iterationCount = 30;
+        for (int iteration = 0; iteration < iterationCount; iteration++)
+        {
+            E = E - (E - e*sin(E) - M)/(1.0 - e*cos(E));
+        }
+        float r = a * (1.0 - e*cos(E));
+        float nu = 2.0 * atan(sqrt((1.0 + e)/(1.0 - e)) * tan(E/2.0));
+
+        float theta = omega + nu;
+
+        x = r * (cos(sigma)*cos(theta) - sin(sigma)*sin(theta)*cos(i));
+        y = r * (sin(sigma)*cos(theta) + cos(sigma)*sin(theta)*cos(i));
+        z = r * (sin(i)*sin(theta));
+
+        gl_Position = uPMatrix * uMVMatrix * vec4(x, y, z, 1.0);
+    }
+</script>
+<script type="x-shader/x-fragment" id="shader-fs">
+    precision mediump float; // or lowp
+
+    varying float x;
+    varying float y;
+    varying float z;
+
+    void main(void)
+    {
+        // float cosX = abs(cos(x));
+        // float cosY = abs(cos(y));
+        // float cosZ = abs(cos(z));
+        float red = abs(x);
+        gl_FragColor = vec4(red, y, z, 1.0);
+    }
+</script>
+</body>
+</html>
