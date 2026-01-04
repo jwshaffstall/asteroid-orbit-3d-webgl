@@ -1,39 +1,94 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <title>astorb 3d</title>
     <meta name="viewport" content="width=device-width">
-    <style type="text/css">
+    <style>
+        html, body
+        {
+            height: 100%;
+            margin: 0;
+            overflow: hidden; /* no page scrollbars */
+        }
+
         body
         {
-            font-family: Monospace;
+            font-family: monospace;
             background-color: white;
             color: black;
-            margin: 4px;
+
+            /* Let the canvas take the remaining height. */
+            display: flex;
+            flex-direction: column;
+
+            /* Fit exactly into the viewport. */
+            height: 100vh;
+            box-sizing: border-box;
+
+            /* Internal spacing without affecting flex sizing like margins can. */
+            padding: 4px;
+
+            /* Allow children to shrink instead of overflowing. */
+            min-height: 0;
         }
+
         h1
         {
-            margin: 0px;
+            margin: 0;
+            flex: 0 0 auto;
         }
+
         #astorb3dCanvas
         {
             width: 100%;
-            height: 500px;
+
+            /* Fill the remaining space between the header and the fixed-height areas. */
+            flex: 1 1 auto;
+            min-height: 0;
+
             background-color: pink;
+            outline: none;
+
+            /* Prevent inline-canvas whitespace affecting layout. */
+            display: block;
+        }
+        #astorb3dCanvas:focus
+        {
+            outline: 2px solid #4CAF50;
+        }
+        #statusDisplay
+        {
+            padding: 5px;
+            background-color: #333;
+            color: #0f0;
+            font-size: 12px;
+            font-family: monospace;
+            flex: 0 0 auto;
         }
         #astorbLog
         {
             width: 100%;
-            height: 100%;
+
+            /* Fixed log area that scrolls instead of growing forever. */
+            height: 160px;
+            overflow-y: auto;
+
             background-color: lightgray;
+            flex: 0 0 auto;
+            min-height: 0;
+
+            /* Keep long lines from forcing horizontal growth. */
+            white-space: pre-wrap;
+            word-break: break-word;
         }
     </style>
 </head>
 <body onload="astorb.onLoadBody()">
 <h1>astorb 3d</h1>
-<canvas id="astorb3dCanvas">
+<canvas id="astorb3dCanvas" tabindex="0">
     Your browser doesn't appear to support the HTML5 <code>&lt;canvas&gt;</code> element.
 </canvas>
+<div id="statusDisplay">Status: Loading...</div>
 <div id="astorbLog"></div>
 <!-- <script src="scripts/js/libs/sylvester.src.js"></script> -->
 <!-- <script src="scripts/js/libs/glUtils.js"></script> -->
@@ -84,7 +139,7 @@
         float n = sqrt(muSun / pow(a, 3.0));
         float M = mod(n * time + M0, two_pi);
 
-        float E = 10.0;
+        float E = M;  // Initialize E with mean anomaly for better convergence
         const int iterationCount = 30;
         for (int iteration = 0; iteration < iterationCount; iteration++)
         {
@@ -100,6 +155,7 @@
         z = r * (sin(i)*sin(theta));
 
         gl_Position = uPMatrix * uMVMatrix * vec4(x, y, z, 1.0);
+        gl_PointSize = 2.0;
     }
 </script>
 <script type="x-shader/x-fragment" id="shader-fs">
@@ -111,11 +167,12 @@
 
     void main(void)
     {
-        // float cosX = abs(cos(x));
-        // float cosY = abs(cos(y));
-        // float cosZ = abs(cos(z));
-        float red = abs(x);
-        gl_FragColor = vec4(red, y, z, 1.0);
+        // Normalize positions to 0-1 range based on AU distance
+        float dist = sqrt(x*x + y*y + z*z);
+        float r = 0.5 + 0.5 * x / max(dist, 0.1);
+        float g = 0.5 + 0.5 * y / max(dist, 0.1);
+        float b = 0.5 + 0.5 * z / max(dist, 0.1);
+        gl_FragColor = vec4(r, g, b, 1.0);
     }
 </script>
 </body>
