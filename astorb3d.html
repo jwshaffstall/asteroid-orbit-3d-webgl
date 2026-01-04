@@ -236,13 +236,23 @@
         vec3 color;
         if (uColorMode == 1)
         {
+            // Normalize eccentricity (0 = circular, 1 = very eccentric)
             float normalizedEccentricity = clamp(vEccentricity / 0.4, 0.0, 1.0);
-            float inclination = clamp(abs(vInclination) / 20.0, 0.0, 1.0);
-            vec3 baseColor = vec3(1.0);
-            vec3 eccentricColor = vec3(1.0, 0.55, 0.25);
-            vec3 inclinationColor = vec3(0.35, 0.6, 1.0);
-            color = mix(baseColor, eccentricColor, normalizedEccentricity);
-            color = mix(color, inclinationColor, inclination * 0.8);
+            // Normalize inclination (0 = ecliptic plane, 1 = highly inclined)
+            float normalizedInclination = clamp(abs(vInclination) / 30.0, 0.0, 1.0);
+
+            // Define color scheme:
+            // Green for circular orbits in ecliptic plane
+            // Red for eccentric orbits
+            // Blue for highly inclined orbits
+            vec3 circularEclipticColor = vec3(0.2, 0.9, 0.3);  // Bright green
+            vec3 eccentricColor = vec3(1.0, 0.2, 0.15);         // Bright red
+            vec3 inclinedColor = vec3(0.4, 0.6, 1.0);          // Blue
+
+            // First blend between green (circular) and red (eccentric)
+            color = mix(circularEclipticColor, eccentricColor, normalizedEccentricity);
+            // Then blend towards blue based on inclination
+            color = mix(color, inclinedColor, normalizedInclination * 0.7);
         }
         else if (uColorMode == 2)
         {
