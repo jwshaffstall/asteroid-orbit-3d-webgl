@@ -125,6 +125,7 @@ astorb.onLoadBody = function()
                 }
 
                 astorb.setupTimeControls();
+                astorb.initStats();
                 astorb.loadAstorbData();
             }
         }
@@ -857,6 +858,21 @@ astorb.setupTimeControls = function()
     astorb.refreshTimeControls();
 };
 
+astorb.stats = null;
+astorb.initStats = function()
+{
+    if (typeof Stats === 'undefined') return;
+
+    var stats = new Stats();
+    stats.showPanel(0);
+    stats.dom.style.position = 'fixed';
+    stats.dom.style.top = '0';
+    stats.dom.style.right = '0';
+    stats.dom.style.left = 'auto';
+    document.body.appendChild(stats.dom);
+    astorb.stats = stats;
+};
+
 astorb.refreshTimeControls = function()
 {
     var pauseButton = document.getElementById('pauseButton');
@@ -903,6 +919,12 @@ astorb.animate = function(timestamp)
     var gl = astorb.gl;
     var asteroidCount = astorb.asteroidCount;
     var time = astorb.time;
+    var stats = astorb.stats;
+
+    if (stats)
+    {
+        stats.begin();
+    }
 
     // Keep buffer sized even if layout changes during animation.
     astorb.resizeWebGL();
@@ -993,6 +1015,11 @@ astorb.animate = function(timestamp)
         astorb.firstFrameRendered = true;
         window.__astorbFirstFrameRendered = true;
         document.dispatchEvent(new CustomEvent('astorb:first-frame'));
+    }
+
+    if (stats)
+    {
+        stats.end();
     }
 
     requestAnimationFrame(astorb.animate);
