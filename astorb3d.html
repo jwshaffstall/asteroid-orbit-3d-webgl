@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <title>astorb 3d</title>
-    <meta name="viewport" content="width=device-width">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <style>
         html, body
         {
@@ -16,6 +16,9 @@
             font-family: monospace;
             background-color: white;
             color: black;
+
+            /* Avoid double-tap zoom while tapping controls. */
+            touch-action: manipulation;
 
             /* Let the canvas take the remaining height. */
             display: flex;
@@ -87,6 +90,7 @@
             font-size: 14px;
             cursor: pointer;
             min-width: 90px;
+            touch-action: manipulation;
         }
         #controlBar button:active
         {
@@ -99,11 +103,17 @@
         }
         @media (max-width: 640px)
         {
+            #controlBar
+            {
+                gap: 4px;
+                padding: 4px 0;
+            }
             #controlBar button
             {
-                flex: 1 1 120px;
-                font-size: 16px;
-                padding: 10px 16px;
+                flex: 1 1 96px;
+                font-size: 12px;
+                padding: 6px 8px;
+                min-width: 0;
             }
         }
         #astorbLog
