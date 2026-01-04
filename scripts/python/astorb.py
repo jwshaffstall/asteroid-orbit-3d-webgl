@@ -18,6 +18,7 @@ class AstorbIdentifier:
     Identifier = ([7, 26], "", "")
 
     def __init__(self):
+        pass
 
 
 class AstorbEpoch:
@@ -83,13 +84,13 @@ def ValidateAstorb(astorbFilePath):
             else:
                 invalidLineCount += 1
 
-    print "%s: %d" %(astorbFilePath, lineCount)
-    print "valid: %d" %(validLineCount)
-    print "invalid: %d" %(invalidLineCount)
+    print("%s: %d" % (astorbFilePath, lineCount))
+    print("valid: %d" % (validLineCount))
+    print("invalid: %d" % (invalidLineCount))
 
 if __name__ == "__main__":
     workingDirectory = os.getcwd()
-    print "working directory: %s" %(workingDirectory)
+    print("working directory: %s" % (workingDirectory))
 
-    astorbFilePath = "../astorb.dat"
+    astorbFilePath = "../../astorb/astorb.dat"
     ValidateAstorb(astorbFilePath)
