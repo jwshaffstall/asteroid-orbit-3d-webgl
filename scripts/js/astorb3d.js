@@ -321,14 +321,7 @@ astorb.onLoadAstorbData = function(errorCode, response)
         gl.bufferData(gl.ARRAY_BUFFER, astorbFloats, gl.STATIC_DRAW);
         astorb.astorbBuffer = astorbBuffer;
 
-        var bytesPerFloat = 4;
-        var floatStride = floatsPerAsteroid * bytesPerFloat; // 24 bytes per asteroid
-        gl.vertexAttribPointer(astorb.aMeanAnomaly,             1, gl.FLOAT, false, floatStride, 0);
-        gl.vertexAttribPointer(astorb.aArgumentOfPerihelion,    1, gl.FLOAT, false, floatStride, 4);
-        gl.vertexAttribPointer(astorb.aLongitudeOfAscendingNode,1, gl.FLOAT, false, floatStride, 8);
-        gl.vertexAttribPointer(astorb.aInclination,             1, gl.FLOAT, false, floatStride, 12);
-        gl.vertexAttribPointer(astorb.aEccentricity,            1, gl.FLOAT, false, floatStride, 16);
-        gl.vertexAttribPointer(astorb.aSemimajorAxis,           1, gl.FLOAT, false, floatStride, 20);
+        astorb.configureAttributePointers(gl);
 
         astorb.frameCount = 0;
         requestAnimationFrame(astorb.animate);
@@ -381,8 +374,87 @@ astorb.initBuffers = function(gl)
     // Set up camera controls
     astorb.setupCameraControls(canvas);
 
+    // Initialize planet orbit paths
+    astorb.initPlanetOrbits(gl);
+
     // Update the view matrix initially
     astorb.updateViewMatrix();
+};
+
+astorb.configureAttributePointers = function(gl)
+{
+    var bytesPerFloat = 4;
+    var floatsPerVertex = 6;
+    var floatStride = floatsPerVertex * bytesPerFloat;
+    astorb.attributeStride = floatStride;
+
+    if (astorb.aMeanAnomaly >= 0) {
+        gl.vertexAttribPointer(astorb.aMeanAnomaly, 1, gl.FLOAT, false, floatStride, 0);
+    }
+    if (astorb.aArgumentOfPerihelion >= 0) {
+        gl.vertexAttribPointer(astorb.aArgumentOfPerihelion, 1, gl.FLOAT, false, floatStride, 4);
+    }
+    if (astorb.aLongitudeOfAscendingNode >= 0) {
+        gl.vertexAttribPointer(astorb.aLongitudeOfAscendingNode, 1, gl.FLOAT, false, floatStride, 8);
+    }
+    if (astorb.aInclination >= 0) {
+        gl.vertexAttribPointer(astorb.aInclination, 1, gl.FLOAT, false, floatStride, 12);
+    }
+    if (astorb.aEccentricity >= 0) {
+        gl.vertexAttribPointer(astorb.aEccentricity, 1, gl.FLOAT, false, floatStride, 16);
+    }
+    if (astorb.aSemimajorAxis >= 0) {
+        gl.vertexAttribPointer(astorb.aSemimajorAxis, 1, gl.FLOAT, false, floatStride, 20);
+    }
+};
+
+astorb.planetOrbits = [
+    {name: "Mercury", a: 0.38709927, e: 0.20563593, i: 7.00497902, w: 29.12703035, O: 48.33076593, M: 174.795884},
+    {name: "Venus", a: 0.72333566, e: 0.00677672, i: 3.39467605, w: 54.92262463, O: 76.67984255, M: 50.416113},
+    {name: "Earth", a: 1.00000261, e: 0.01671123, i: -0.00001531, w: 102.93768193, O: -11.26064, M: 100.464571},
+    {name: "Mars", a: 1.52371034, e: 0.09339410, i: 1.84969142, w: 286.537, O: 49.55953891, M: 19.412},
+    {name: "Jupiter", a: 5.20288700, e: 0.04838624, i: 1.30439695, w: 273.867, O: 100.47390909, M: 20.020},
+    {name: "Saturn", a: 9.53667594, e: 0.05386179, i: 2.48599187, w: 339.392, O: 113.66242448, M: 317.020},
+    {name: "Uranus", a: 19.18916464, e: 0.04725744, i: 0.77263783, w: 96.998857, O: 74.01692503, M: 142.2386},
+    {name: "Neptune", a: 30.06992276, e: 0.00859048, i: 1.77004347, w: 273.187, O: 131.78422574, M: 256.228}
+];
+
+astorb.initPlanetOrbits = function(gl)
+{
+    var segments = 240;
+    var floatsPerVertex = 6;
+    var planetCount = astorb.planetOrbits.length;
+    var verticesPerOrbit = segments + 1;
+    var totalVertices = planetCount * verticesPerOrbit;
+
+    var orbitData = new Float32Array(totalVertices * floatsPerVertex);
+    var offsets = [];
+    var cursor = 0;
+
+    for (var planetIndex = 0; planetIndex < planetCount; planetIndex++)
+    {
+        var planet = astorb.planetOrbits[planetIndex];
+        offsets.push({name: planet.name, start: planetIndex * verticesPerOrbit, count: verticesPerOrbit});
+
+        for (var segmentIndex = 0; segmentIndex < verticesPerOrbit; segmentIndex++)
+        {
+            var meanAnomaly = 360.0 * (segmentIndex / segments);
+            orbitData[cursor++] = meanAnomaly;
+            orbitData[cursor++] = planet.w;
+            orbitData[cursor++] = planet.O;
+            orbitData[cursor++] = planet.i;
+            orbitData[cursor++] = planet.e;
+            orbitData[cursor++] = planet.a;
+        }
+    }
+
+    var orbitBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, orbitBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, orbitData, gl.STATIC_DRAW);
+
+    astorb.planetOrbitBuffer = orbitBuffer;
+    astorb.planetOrbitOffsets = offsets;
+    astorb.planetOrbitSegments = segments;
 };
 
 astorb.setupCameraControls = function(canvas)
@@ -421,6 +493,70 @@ astorb.setupCameraControls = function(canvas)
 
         astorb.updateViewMatrix();
     });
+
+    // Touch controls - single finger rotate, pinch to zoom
+    var touchState = {
+        isDragging: false,
+        lastX: 0,
+        lastY: 0,
+        lastDistance: 0,
+        isPinching: false
+    };
+
+    canvas.addEventListener('touchstart', function(event) {
+        if (event.touches.length === 1) {
+            var touch = event.touches[0];
+            touchState.isDragging = true;
+            touchState.isPinching = false;
+            touchState.lastX = touch.clientX;
+            touchState.lastY = touch.clientY;
+        } else if (event.touches.length === 2) {
+            var dx = event.touches[0].clientX - event.touches[1].clientX;
+            var dy = event.touches[0].clientY - event.touches[1].clientY;
+            touchState.lastDistance = Math.sqrt(dx * dx + dy * dy);
+            touchState.isPinching = true;
+            touchState.isDragging = false;
+        }
+        event.preventDefault();
+    }, {passive: false});
+
+    canvas.addEventListener('touchmove', function(event) {
+        if (event.touches.length === 1 && touchState.isDragging) {
+            var touch = event.touches[0];
+            var deltaX = touch.clientX - touchState.lastX;
+            var deltaY = touch.clientY - touchState.lastY;
+
+            camera.rotationY += deltaX * 0.005;
+            camera.rotationX += deltaY * 0.005;
+            camera.rotationX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotationX));
+
+            touchState.lastX = touch.clientX;
+            touchState.lastY = touch.clientY;
+            astorb.updateViewMatrix();
+        } else if (event.touches.length === 2 && touchState.isPinching) {
+            var dx = event.touches[0].clientX - event.touches[1].clientX;
+            var dy = event.touches[0].clientY - event.touches[1].clientY;
+            var distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (touchState.lastDistance > 0) {
+                var zoomDelta = (touchState.lastDistance - distance) * 0.002;
+                camera.distance += zoomDelta * camera.distance;
+                camera.distance = Math.max(camera.minDistance, Math.min(camera.maxDistance, camera.distance));
+                astorb.updateViewMatrix();
+            }
+
+            touchState.lastDistance = distance;
+        }
+        event.preventDefault();
+    }, {passive: false});
+
+    canvas.addEventListener('touchend', function(event) {
+        if (event.touches.length === 0) {
+            touchState.isDragging = false;
+            touchState.isPinching = false;
+            touchState.lastDistance = 0;
+        }
+    }, {passive: false});
 
     // Mouse wheel - zoom
     canvas.addEventListener('wheel', function(event) {
@@ -467,7 +603,7 @@ astorb.setupCameraControls = function(canvas)
     canvas.addEventListener('keydown', handleKeydown);
     window.addEventListener('keydown', handleKeydown);
 
-    astorb.log("Controls: Drag to rotate, Scroll to zoom, Space=pause, Up/Down=speed, R=reset", "green");
+    astorb.log("Controls: Drag to rotate, Scroll/pinch to zoom, Space=pause, Up/Down=speed, R=reset", "green");
     astorb.log("Click on canvas first to enable keyboard controls", "green");
 };
 
@@ -526,7 +662,7 @@ astorb.animate = function(timestamp)
             statusDiv.innerHTML = pauseStatus + " Time: " + years.toFixed(2) + " years | " +
                 "Asteroids: " + asteroidCount + " | " +
                 "Camera: distance=" + astorb.camera.distance.toFixed(1) + " AU | " +
-                "Controls: Drag=rotate, Scroll=zoom, Space=pause, Up/Down=speed, R=reset";
+                "Controls: Drag=rotate, Scroll/pinch=zoom, Space=pause, Up/Down=speed, R=reset";
         }
     }
 
@@ -537,6 +673,22 @@ astorb.animate = function(timestamp)
 
     // Render
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    if (astorb.planetOrbitBuffer)
+    {
+        gl.bindBuffer(gl.ARRAY_BUFFER, astorb.planetOrbitBuffer);
+        astorb.configureAttributePointers(gl);
+        gl.uniform1f(astorb.timeUniform, 0);
+
+        for (var orbitIndex = 0; orbitIndex < astorb.planetOrbitOffsets.length; orbitIndex++)
+        {
+            var orbit = astorb.planetOrbitOffsets[orbitIndex];
+            gl.drawArrays(gl.LINE_STRIP, orbit.start, orbit.count);
+        }
+    }
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, astorb.astorbBuffer);
+    astorb.configureAttributePointers(gl);
+    gl.uniform1f(astorb.timeUniform, time.simTime);
     gl.drawArrays(gl.POINTS, 0, asteroidCount);
 
     requestAnimationFrame(astorb.animate);

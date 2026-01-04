@@ -51,6 +51,9 @@
 
             /* Prevent inline-canvas whitespace affecting layout. */
             display: block;
+
+            /* Ensure touch gestures are handled by the canvas. */
+            touch-action: none;
         }
         #astorb3dCanvas:focus
         {
