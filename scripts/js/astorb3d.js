@@ -148,6 +148,7 @@ astorb.onLoadBody = function()
                 astorb.setupTimeControls();
                 astorb.setupAsteroidControls();
                 astorb.setupDepthBufferControls();
+                astorb.setupRenderColorControls();
                 astorb.initStats();
                 astorb.loadAstorbData();
             }
@@ -451,6 +452,7 @@ astorb.initBuffers = function(gl)
     var cameraFieldOfViewRadians = Math.PI / 3; // 60 degree FOV
     var nearPlaneAU = 0.005;
     var farPlaneAU = 300.0;
+    astorb.farPlaneAU = farPlaneAU;
     mat4.perspective(perspectiveMatrix, cameraFieldOfViewRadians, aspectRatio, nearPlaneAU, farPlaneAU);
 
     gl.useProgram(astorb.asteroidProgram);
@@ -461,6 +463,17 @@ astorb.initBuffers = function(gl)
 
     astorb.mvUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
     astorb.timeUniform = gl.getUniformLocation(shaderProgram, "time");
+    astorb.colorModeUniform = gl.getUniformLocation(shaderProgram, "uColorMode");
+    astorb.farPlaneUniform = gl.getUniformLocation(shaderProgram, "uFarPlaneAU");
+
+    if (astorb.colorModeUniform !== null)
+    {
+        gl.uniform1i(astorb.colorModeUniform, astorb.colorModeIndex || 0);
+    }
+    if (astorb.farPlaneUniform !== null)
+    {
+        gl.uniform1f(astorb.farPlaneUniform, astorb.farPlaneAU);
+    }
 
     if (astorb.bodyUniforms)
     {
@@ -951,6 +964,40 @@ astorb.setupDepthBufferControls = function()
     astorb.refreshDepthBufferControls();
 };
 
+astorb.colorModes = [
+    {id: 0, label: "Color: XYZ"},
+    {id: 1, label: "Color: Orbit Shape"},
+    {id: 2, label: "Color: Camera Depth"}
+];
+astorb.colorModeIndex = 0;
+
+astorb.applyColorMode = function()
+{
+    var gl = astorb.gl;
+    if (!gl || astorb.colorModeUniform === null) return;
+
+    gl.useProgram(astorb.asteroidProgram);
+    var mode = astorb.colorModes[astorb.colorModeIndex] || astorb.colorModes[0];
+    gl.uniform1i(astorb.colorModeUniform, mode.id);
+};
+
+astorb.setupRenderColorControls = function()
+{
+    var renderButton = document.getElementById('renderColorButton');
+
+    if (renderButton)
+    {
+        renderButton.addEventListener('click', function() {
+            astorb.colorModeIndex = (astorb.colorModeIndex + 1) % astorb.colorModes.length;
+            astorb.applyColorMode();
+            astorb.refreshRenderColorControls();
+        });
+    }
+
+    astorb.applyColorMode();
+    astorb.refreshRenderColorControls();
+};
+
 astorb.stats = null;
 astorb.initStats = function()
 {
@@ -1022,6 +1069,17 @@ astorb.refreshDepthBufferControls = function()
     if (depthButton)
     {
         depthButton.textContent = "Depth: " + (astorb.depthBufferEnabled ? "On" : "Off");
+    }
+};
+
+astorb.refreshRenderColorControls = function()
+{
+    var renderButton = document.getElementById('renderColorButton');
+
+    if (renderButton)
+    {
+        var mode = astorb.colorModes[astorb.colorModeIndex] || astorb.colorModes[0];
+        renderButton.textContent = mode.label;
     }
 };
 
