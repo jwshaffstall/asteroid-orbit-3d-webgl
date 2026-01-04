@@ -419,11 +419,15 @@ astorb.onLoadAstorbData = function(errorCode, response)
 
 // Camera state
 astorb.camera = {
-    rotationX: 0.5,      // Initial tilt
-    rotationY: 0.0,
-    distance: 8.0,       // Distance from origin
+    // azimuth: horizontal angle in the ecliptic plane (X-Y). 0 = looking from +Y toward origin.
+    // elevation: angle above/below the ecliptic plane. 0 = in plane, +80° = above, -80° = below.
+    azimuth: 0.0,
+    elevation: 20.0 * Math.PI / 180.0,  // Start slightly above the ecliptic plane
+    distance: 8.0,       // Distance from origin in AU
     minDistance: 1.0,
     maxDistance: 150.0,
+    // Vertical orbit limits expressed as +/- degrees above/below the ecliptic.
+    maxElevationRadians: (80.0 * Math.PI / 180.0),
     isDragging: false,
     lastMouseX: 0,
     lastMouseY: 0
@@ -752,11 +756,16 @@ astorb.setupCameraControls = function(canvas)
         var deltaX = event.clientX - camera.lastMouseX;
         var deltaY = event.clientY - camera.lastMouseY;
 
-        camera.rotationY += deltaX * 0.005;
-        camera.rotationX += deltaY * 0.005;
+        // Orbit controls:
+        // - Horizontal drag: azimuth in the ecliptic plane (unlimited)
+        // - Vertical drag: elevation above/below ecliptic (clamped to +/-80°)
+        var rotateSpeed = 0.005;
+        camera.azimuth += deltaX * rotateSpeed;
+        camera.elevation += deltaY * rotateSpeed;
 
-        // Clamp vertical rotation to avoid flipping
-        camera.rotationX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotationX));
+        // Clamp elevation to +/-80 degrees above/below the ecliptic.
+        var maxElev = camera.maxElevationRadians || (80.0 * Math.PI / 180.0);
+        camera.elevation = Math.max(-maxElev, Math.min(maxElev, camera.elevation));
 
         camera.lastMouseX = event.clientX;
         camera.lastMouseY = event.clientY;
@@ -796,9 +805,12 @@ astorb.setupCameraControls = function(canvas)
             var deltaX = touch.clientX - touchState.lastX;
             var deltaY = touch.clientY - touchState.lastY;
 
-            camera.rotationY += deltaX * 0.005;
-            camera.rotationX += deltaY * 0.005;
-            camera.rotationX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotationX));
+            var rotateSpeed = 0.005;
+            camera.azimuth -= deltaX * rotateSpeed;
+            camera.elevation += deltaY * rotateSpeed;
+
+            var maxElev = camera.maxElevationRadians || (80.0 * Math.PI / 180.0);
+            camera.elevation = Math.max(-maxElev, Math.min(maxElev, camera.elevation));
 
             touchState.lastX = touch.clientX;
             touchState.lastY = touch.clientY;
@@ -1088,15 +1100,83 @@ astorb.updateViewMatrix = function()
     var gl = astorb.gl;
     var camera = astorb.camera;
 
+    // Orbit camera: camera always looks at the origin (Sun).
+    // The ecliptic plane is X-Y, and Z is perpendicular to the ecliptic (Z+ is "up").
+    // azimuth = angle in the ecliptic plane (horizontal mouse movement), unlimited
+    // elevation = angle above/below the ecliptic plane (vertical mouse movement), clamped to +/-80°
+    // distance = AU from camera to origin
+
+    // Clamp elevation to +/-80 degrees.
+    var maxElev = camera.maxElevationRadians || (80.0 * Math.PI / 180.0);
+    camera.elevation = Math.max(-maxElev, Math.min(maxElev, camera.elevation));
+
+    // Wrap azimuth for numeric stability (keep it from growing unbounded).
+    if (Math.abs(camera.azimuth) > Math.PI * 64)
+    {
+        camera.azimuth = ((camera.azimuth % (2.0 * Math.PI)) + 2.0 * Math.PI) % (2.0 * Math.PI);
+        if (camera.azimuth > Math.PI) camera.azimuth -= 2.0 * Math.PI;
+    }
+
+    var azimuth = camera.azimuth;
+    var elevation = camera.elevation;
+    var r = camera.distance;
+
+    // Spherical coordinates -> Cartesian camera position.
+    // elevation = 0 means camera is in the X-Y plane.
+    // azimuth = 0 means camera is on the +Y axis (looking toward origin along -Y).
+    var cosElev = Math.cos(elevation);
+    var sinElev = Math.sin(elevation);
+    var sinAzi = Math.sin(azimuth);
+    var cosAzi = Math.cos(azimuth);
+
+    var eye = vec3.fromValues(
+        r * cosElev * sinAzi,   // X
+        r * cosElev * cosAzi,   // Y
+        r * sinElev             // Z (up)
+    );
+    var center = vec3.fromValues(0.0, 0.0, 0.0);
+    var up = vec3.fromValues(0.0, 0.0, 1.0);  // Z is up
+
+    // Build a lookAt matrix.
+    var f = vec3.create();
+    vec3.subtract(f, center, eye);
+    vec3.normalize(f, f);
+
+    var s = vec3.create();
+    vec3.cross(s, f, up);
+    vec3.normalize(s, s);
+
+    // Handle the degenerate case when looking straight up or down (f parallel to up).
+    if (vec3.length(s) < 0.0001)
+    {
+        // Fallback: use Y as the right vector when looking along Z.
+        s = vec3.fromValues(1.0, 0.0, 0.0);
+    }
+
+    var u = vec3.create();
+    vec3.cross(u, s, f);
+
     var mvMatrix = mat4.create();
-    mat4.identity(mvMatrix);
+    // Column-major layout (gl-matrix).
+    mvMatrix[0] = s[0];
+    mvMatrix[1] = u[0];
+    mvMatrix[2] = -f[0];
+    mvMatrix[3] = 0;
 
-    // Apply transformations: translate back, then rotate
-    var translationVector = vec3.fromValues(0.0, 0.0, -camera.distance);
-    mat4.translate(mvMatrix, mvMatrix, translationVector);
+    mvMatrix[4] = s[1];
+    mvMatrix[5] = u[1];
+    mvMatrix[6] = -f[1];
+    mvMatrix[7] = 0;
 
-    mat4.rotateX(mvMatrix, mvMatrix, camera.rotationX);
-    mat4.rotateY(mvMatrix, mvMatrix, camera.rotationY);
+    mvMatrix[8] = s[2];
+    mvMatrix[9] = u[2];
+    mvMatrix[10] = -f[2];
+    mvMatrix[11] = 0;
+
+    mvMatrix[12] = -vec3.dot(s, eye);
+    mvMatrix[13] = -vec3.dot(u, eye);
+    mvMatrix[14] = vec3.dot(f, eye);
+    mvMatrix[15] = 1;
 
     gl.useProgram(astorb.asteroidProgram);
     gl.uniformMatrix4fv(astorb.mvUniform, false, mvMatrix);
