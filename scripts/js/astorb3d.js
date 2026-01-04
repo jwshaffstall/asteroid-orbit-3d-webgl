@@ -11,6 +11,25 @@
 
 var astorb = astorb || {};
 
+astorb.formatNumber = function(value)
+{
+    if (value === null || value === undefined)
+    {
+        return "--";
+    }
+    return Number(value).toLocaleString('en-US');
+};
+
+astorb.formatAsteroidPercent = function(current, total)
+{
+    if (!total)
+    {
+        return "0%";
+    }
+    var percent = (current / total) * 100;
+    return percent.toFixed(1) + "%";
+};
+
 // Resize canvas drawing buffer + viewport to match CSS size.
 astorb.resizeWebGL = function()
 {
@@ -806,14 +825,11 @@ astorb.setupCameraControls = function(canvas)
                 astorb.refreshTimeControls();
                 event.preventDefault();
                 break;
-            case 'r':  // Reset view
-            case 'R':
-                camera.rotationX = 0.5;
-                camera.rotationY = 0;
-                camera.distance = 8.0;
+            case '0':  // Reset time to 0
+            case 'o':
+            case 'O':
                 time.simTime = 0;
-                astorb.updateViewMatrix();
-                astorb.log("View reset", "blue");
+                astorb.log("Time reset to 0", "blue");
                 event.preventDefault();
                 break;
         }
@@ -822,7 +838,7 @@ astorb.setupCameraControls = function(canvas)
     canvas.addEventListener('keydown', handleKeydown);
     window.addEventListener('keydown', handleKeydown);
 
-    astorb.log("Controls: Drag to rotate, Scroll/pinch to zoom, Space=pause, Up/Down=speed, R=reset", "green");
+    astorb.log("Controls: Drag to rotate, Scroll/pinch to zoom, Space=pause, Up/Down=speed, 0/O=reset time", "green");
     astorb.log("Click on canvas first to enable keyboard controls", "green");
 };
 
@@ -875,7 +891,7 @@ astorb.setupAsteroidControls = function()
             var current = astorb.asteroidDrawCount || total;
             var nextCount = Math.max(1, Math.floor(current / 2));
             astorb.asteroidDrawCount = nextCount;
-            astorb.log("Asteroid draw count: " + nextCount + " / " + total, "blue");
+            astorb.log("Asteroid draw count: " + astorb.formatNumber(nextCount) + " / " + astorb.formatNumber(total), "blue");
             astorb.refreshAsteroidControls();
         });
     }
@@ -888,7 +904,7 @@ astorb.setupAsteroidControls = function()
             var current = astorb.asteroidDrawCount || total;
             var nextCount = Math.min(total, current * 2);
             astorb.asteroidDrawCount = nextCount;
-            astorb.log("Asteroid draw count: " + nextCount + " / " + total, "blue");
+            astorb.log("Asteroid draw count: " + astorb.formatNumber(nextCount) + " / " + astorb.formatNumber(total), "blue");
             astorb.refreshAsteroidControls();
         });
     }
@@ -939,7 +955,9 @@ astorb.refreshAsteroidControls = function()
     {
         if (total)
         {
-            asteroidCountLabel.textContent = "Asteroids: " + current + " / " + total;
+            var percent = astorb.formatAsteroidPercent(current, total);
+            asteroidCountLabel.textContent = "Asteroids: " + astorb.formatNumber(current) + " / " +
+                astorb.formatNumber(total) + " (" + percent + ")";
         }
         else
         {
@@ -1027,11 +1045,13 @@ astorb.animate = function(timestamp)
         if (statusDiv) {
             var years = time.simTime / (365.25 * 24 * 3600);  // Convert seconds to years
             var pauseStatus = time.paused ? "[PAUSED]" : "[RUNNING]";
+            var percent = astorb.formatAsteroidPercent(asteroidDrawCount, asteroidCount);
             statusDiv.innerHTML = pauseStatus + " Time: " + years.toFixed(2) + " years | " +
-                "Asteroids: " + asteroidDrawCount + " / " + asteroidCount + " | " +
+                "Asteroids: " + astorb.formatNumber(asteroidDrawCount) + " / " + astorb.formatNumber(asteroidCount) +
+                " (" + percent + ") | " +
                 "Camera: distance=" + astorb.camera.distance.toFixed(1) + " AU | " +
                 "Speed: " + time.timeScale.toExponential(1) + "x | " +
-                "Controls: Drag=rotate, Scroll/pinch=zoom, Space=pause, Up/Down=speed, R=reset";
+                "Controls: Drag=rotate, Scroll/pinch=zoom, Space=pause, Up/Down=speed, 0/O=reset time";
         }
     }
 
