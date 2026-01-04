@@ -10,14 +10,52 @@ var stream = require('stream');
 var assert = require("assert");
 var astorb_line = require("./astorb_line.js");
 
-var args = require("optimist")
-    .usage("Usage: $0")
-    .alias("i", "input")
-    .describe("i", "path/to/astorb.dat")
-    .alias("o", "output")
-    .describe("o", "path/to/output.file")
-    .demand(["i", "o"])
-    .argv;
+var minimist = require("minimist");
+
+function printUsage(exitCode)
+{
+    console.log("Usage: node %s -i path/to/astorb.dat -o path/to/output.file", process.argv[1]);
+    console.log("");
+    console.log("Options:");
+    console.log("  -i, --input   path/to/astorb.dat (required)");
+    console.log("  -o, --output  path/to/output.file (required)");
+    console.log("  -h, --help    show this help");
+
+    // Match typical CLI behavior: 0 for help, non-zero for errors.
+    process.exit(typeof exitCode === "number" ? exitCode : 1);
+}
+
+var args = minimist(process.argv.slice(2), {
+    alias: {
+        i: "input",
+        o: "output",
+        h: "help"
+    },
+    string: ["input", "output"],
+    boolean: ["help"],
+    unknown: function(arg)
+    {
+        // Allow positional args (minimist puts them in _) but reject unknown flags.
+        if (arg && arg[0] === "-")
+        {
+            console.error("Unknown option: %s", arg);
+            printUsage(1);
+            return false;
+        }
+        return true;
+    }
+});
+
+if (args.help)
+{
+    printUsage(0);
+}
+
+// Keep the original contract: both input and output are required.
+if (!args.input || !args.output)
+{
+    printUsage(1);
+}
 
 var inputFilePath = args.input;
 var outputFilePath = args.output;
@@ -111,4 +149,3 @@ astorbLines.on("close", function()
 
     writeAsteroidsBinaryFile(outputFilePath, asteroids);
 });
-
