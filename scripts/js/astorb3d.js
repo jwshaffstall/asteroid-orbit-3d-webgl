@@ -124,6 +124,7 @@ astorb.onLoadBody = function()
                     window.addEventListener('resize', astorb.resizeWebGL);
                 }
 
+                astorb.setupTimeControls();
                 astorb.loadAstorbData();
             }
         }
@@ -332,6 +333,9 @@ astorb.onLoadAstorbData = function(errorCode, response)
         && response instanceof ArrayBuffer)
     {
         astorb.log("loaded astorb data", "green");
+        astorb.dataLoaded = true;
+        window.__astorbDataLoaded = true;
+        document.dispatchEvent(new CustomEvent('astorb:data-loaded'));
         var gl = astorb.gl;
 
         var astorbFloats = new Float32Array(response);
@@ -386,6 +390,11 @@ astorb.time = {
     lastTimestamp: 0,
     paused: false
 };
+
+astorb.dataLoaded = false;
+astorb.firstFrameRendered = false;
+window.__astorbDataLoaded = false;
+window.__astorbFirstFrameRendered = false;
 
 astorb.initBuffers = function(gl)
 {
@@ -468,7 +477,10 @@ astorb.constants = {
     muSun: 3.96401599E-14
 };
 
-astorb.bodyScale = 300000.0;
+astorb.bodyScale = 200000.0;
+astorb.radiusScale = {
+    km: 4000.0
+};
 
 astorb.bodies = [
     {name: "Sun", type: "sun", radiusKm: 696340, color: [1.0, 0.85, 0.3]}
@@ -544,6 +556,13 @@ astorb.initBodies = function(gl)
     astorb.bodyBuffer = bodyBuffer;
 };
 
+astorb.getScaledRadiusAu = function(radiusKm)
+{
+    var logRadius = Math.log(radiusKm) / Math.LN10;
+    var scaledKm = logRadius * astorb.radiusScale.km;
+    return scaledKm / astorb.constants.auKm;
+};
+
 astorb.computeKeplerPosition = function(orbit, timeSec)
 {
     var deg2rad = Math.PI / 180.0;
@@ -608,7 +627,7 @@ astorb.updateBodies = function(timeSec)
     bodyData[cursor++] = 0.0;
     bodyData[cursor++] = 0.0;
     bodyData[cursor++] = 0.0;
-    bodyData[cursor++] = astorb.bodies[0].radiusKm / astorb.constants.auKm;
+    bodyData[cursor++] = astorb.getScaledRadiusAu(astorb.bodies[0].radiusKm);
     bodyData[cursor++] = astorb.bodies[0].color[0];
     bodyData[cursor++] = astorb.bodies[0].color[1];
     bodyData[cursor++] = astorb.bodies[0].color[2];
@@ -624,7 +643,7 @@ astorb.updateBodies = function(timeSec)
         bodyData[cursor++] = position[0];
         bodyData[cursor++] = position[1];
         bodyData[cursor++] = position[2];
-        bodyData[cursor++] = planet.radiusKm / astorb.constants.auKm;
+        bodyData[cursor++] = astorb.getScaledRadiusAu(planet.radiusKm);
         bodyData[cursor++] = planet.color[0];
         bodyData[cursor++] = planet.color[1];
         bodyData[cursor++] = planet.color[2];
@@ -639,7 +658,7 @@ astorb.updateBodies = function(timeSec)
         bodyData[cursor++] = moonPosition[0];
         bodyData[cursor++] = moonPosition[1];
         bodyData[cursor++] = moonPosition[2];
-        bodyData[cursor++] = moon.radiusKm / astorb.constants.auKm;
+        bodyData[cursor++] = astorb.getScaledRadiusAu(moon.radiusKm);
         bodyData[cursor++] = moon.color[0];
         bodyData[cursor++] = moon.color[1];
         bodyData[cursor++] = moon.color[2];
@@ -767,16 +786,19 @@ astorb.setupCameraControls = function(canvas)
             case ' ':  // Space - pause/resume
                 time.paused = !time.paused;
                 astorb.log("Time " + (time.paused ? "paused" : "resumed"), "blue");
+                astorb.refreshTimeControls();
                 event.preventDefault();
                 break;
             case 'ArrowUp':  // Speed up time
                 time.timeScale *= 2;
                 astorb.log("Time scale: " + time.timeScale.toExponential(1), "blue");
+                astorb.refreshTimeControls();
                 event.preventDefault();
                 break;
             case 'ArrowDown':  // Slow down time
                 time.timeScale /= 2;
                 astorb.log("Time scale: " + time.timeScale.toExponential(1), "blue");
+                astorb.refreshTimeControls();
                 event.preventDefault();
                 break;
             case 'r':  // Reset view
@@ -797,6 +819,58 @@ astorb.setupCameraControls = function(canvas)
 
     astorb.log("Controls: Drag to rotate, Scroll/pinch to zoom, Space=pause, Up/Down=speed, R=reset", "green");
     astorb.log("Click on canvas first to enable keyboard controls", "green");
+};
+
+astorb.setupTimeControls = function()
+{
+    var pauseButton = document.getElementById('pauseButton');
+    var slowButton = document.getElementById('slowButton');
+    var fastButton = document.getElementById('fastButton');
+
+    if (pauseButton)
+    {
+        pauseButton.addEventListener('click', function() {
+            astorb.time.paused = !astorb.time.paused;
+            astorb.log("Time " + (astorb.time.paused ? "paused" : "resumed"), "blue");
+            astorb.refreshTimeControls();
+        });
+    }
+
+    if (slowButton)
+    {
+        slowButton.addEventListener('click', function() {
+            astorb.time.timeScale /= 2;
+            astorb.log("Time scale: " + astorb.time.timeScale.toExponential(1), "blue");
+            astorb.refreshTimeControls();
+        });
+    }
+
+    if (fastButton)
+    {
+        fastButton.addEventListener('click', function() {
+            astorb.time.timeScale *= 2;
+            astorb.log("Time scale: " + astorb.time.timeScale.toExponential(1), "blue");
+            astorb.refreshTimeControls();
+        });
+    }
+
+    astorb.refreshTimeControls();
+};
+
+astorb.refreshTimeControls = function()
+{
+    var pauseButton = document.getElementById('pauseButton');
+    var timeScaleLabel = document.getElementById('timeScaleLabel');
+
+    if (pauseButton)
+    {
+        pauseButton.textContent = astorb.time.paused ? "Resume" : "Pause";
+    }
+
+    if (timeScaleLabel)
+    {
+        timeScaleLabel.textContent = "Speed: " + astorb.time.timeScale.toExponential(1) + "x";
+    }
 };
 
 astorb.updateViewMatrix = function()
@@ -864,6 +938,7 @@ astorb.animate = function(timestamp)
             statusDiv.innerHTML = pauseStatus + " Time: " + years.toFixed(2) + " years | " +
                 "Asteroids: " + asteroidCount + " | " +
                 "Camera: distance=" + astorb.camera.distance.toFixed(1) + " AU | " +
+                "Speed: " + time.timeScale.toExponential(1) + "x | " +
                 "Controls: Drag=rotate, Scroll/pinch=zoom, Space=pause, Up/Down=speed, R=reset";
         }
     }
@@ -912,6 +987,13 @@ astorb.animate = function(timestamp)
     astorb.configureAttributePointers(gl);
     gl.uniform1f(astorb.timeUniform, time.simTime);
     gl.drawArrays(gl.POINTS, 0, asteroidCount);
+
+    if (!astorb.firstFrameRendered && astorb.dataLoaded)
+    {
+        astorb.firstFrameRendered = true;
+        window.__astorbFirstFrameRendered = true;
+        document.dispatchEvent(new CustomEvent('astorb:first-frame'));
+    }
 
     requestAnimationFrame(astorb.animate);
 };

@@ -68,6 +68,44 @@
             font-family: monospace;
             flex: 0 0 auto;
         }
+        #controlBar
+        {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            padding: 6px 0;
+            flex: 0 0 auto;
+        }
+        #controlBar button
+        {
+            background-color: #222;
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 6px;
+            padding: 8px 14px;
+            font-size: 14px;
+            cursor: pointer;
+            min-width: 90px;
+        }
+        #controlBar button:active
+        {
+            transform: translateY(1px);
+        }
+        #timeScaleLabel
+        {
+            font-size: 12px;
+            color: #222;
+        }
+        @media (max-width: 640px)
+        {
+            #controlBar button
+            {
+                flex: 1 1 120px;
+                font-size: 16px;
+                padding: 10px 16px;
+            }
+        }
         #astorbLog
         {
             width: 100%;
@@ -88,6 +126,12 @@
 </head>
 <body onload="astorb.onLoadBody()">
 <h1>astorb 3d</h1>
+<div id="controlBar">
+    <button id="pauseButton" type="button">Pause</button>
+    <button id="slowButton" type="button">Slow Down</button>
+    <button id="fastButton" type="button">Speed Up</button>
+    <span id="timeScaleLabel">Speed: --</span>
+</div>
 <canvas id="astorb3dCanvas" tabindex="0">
     Your browser doesn't appear to support the HTML5 <code>&lt;canvas&gt;</code> element.
 </canvas>
