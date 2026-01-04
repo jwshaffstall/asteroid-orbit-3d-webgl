@@ -29,7 +29,7 @@
             box-sizing: border-box;
 
             /* Internal spacing without affecting flex sizing like margins can. */
-            padding: 4px;
+            padding: calc(4px + env(safe-area-inset-top)) 4px 4px 4px;
 
             /* Allow children to shrink instead of overflowing. */
             min-height: 0;

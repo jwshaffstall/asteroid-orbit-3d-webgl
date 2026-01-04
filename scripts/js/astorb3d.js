@@ -1236,9 +1236,7 @@ astorb.animate = function(timestamp)
             statusDiv.innerHTML = pauseStatus + " Time: " + years.toFixed(2) + " years | " +
                 "Asteroids: " + astorb.formatNumber(asteroidDrawCount) + " / " + astorb.formatNumber(asteroidCount) +
                 " (" + percent + ") | " +
-                "Camera: distance=" + astorb.camera.distance.toFixed(1) + " AU | " +
-                "Speed: " + time.timeScale.toExponential(1) + "x | " +
-                "Controls: Drag=rotate, Scroll/pinch=zoom, Space=pause, Up/Down=speed, 0/O=reset time";
+                "Speed: " + time.timeScale.toExponential(1) + "x";
         }
     }
 
