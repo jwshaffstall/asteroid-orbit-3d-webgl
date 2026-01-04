@@ -178,5 +178,46 @@
         gl_FragColor = vec4(r, g, b, 1.0);
     }
 </script>
+<script type="x-shader/x-vertex" id="shader-bodies-vs">
+    precision mediump float;
+
+    attribute vec3 aPosition;
+    attribute float aRadius;
+    attribute vec3 aColor;
+
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+    uniform float uPointScale;
+
+    varying vec3 vColor;
+    varying float vRadius;
+
+    void main(void)
+    {
+        vec4 mvPosition = uMVMatrix * vec4(aPosition, 1.0);
+        gl_Position = uPMatrix * mvPosition;
+
+        float distance = max(0.1, -mvPosition.z);
+        gl_PointSize = max(1.0, (aRadius * uPointScale) / distance);
+
+        vColor = aColor;
+        vRadius = aRadius;
+    }
+</script>
+<script type="x-shader/x-fragment" id="shader-bodies-fs">
+    precision mediump float;
+
+    varying vec3 vColor;
+
+    void main(void)
+    {
+        vec2 coord = gl_PointCoord * 2.0 - 1.0;
+        float r = dot(coord, coord);
+        if (r > 1.0) discard;
+
+        float lighting = 0.35 + 0.65 * sqrt(1.0 - r);
+        gl_FragColor = vec4(vColor * lighting, 1.0);
+    }
+</script>
 </body>
 </html>
