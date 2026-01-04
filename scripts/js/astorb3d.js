@@ -114,6 +114,7 @@ astorb.log("astorb3d.js", "black");
 astorb.log("by John W. Shaffstall", "black");
 
 astorb.canvasId = "astorb3dCanvas";
+astorb.depthBufferEnabled = true;
 astorb.onLoadBody = function()
 {
     var canvas = document.getElementById(astorb.canvasId);
@@ -123,8 +124,9 @@ astorb.onLoadBody = function()
 
         try
         {
-            gl = canvas.getContext("webgl", {antialias:false})
-                || canvas.getContext("experimental-webgl", {antialias:false});
+            var contextOptions = {antialias: false, depth: true};
+            gl = canvas.getContext("webgl", contextOptions)
+                || canvas.getContext("experimental-webgl", contextOptions);
             var initWebGLSuccess = astorb.initWebGL(gl, canvas);
             if (initWebGLSuccess)
             {
@@ -145,6 +147,7 @@ astorb.onLoadBody = function()
 
                 astorb.setupTimeControls();
                 astorb.setupAsteroidControls();
+                astorb.setupDepthBufferControls();
                 astorb.initStats();
                 astorb.loadAstorbData();
             }
@@ -168,7 +171,7 @@ astorb.initWebGL = function(gl, canvas)
     if (gl && canvas)
     {
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
-        gl.disable(gl.DEPTH_TEST);
+        astorb.applyDepthBufferState();
         // gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -188,6 +191,25 @@ astorb.initWebGL = function(gl, canvas)
     }
 
     return success;
+};
+
+astorb.applyDepthBufferState = function()
+{
+    var gl = astorb.gl;
+    if (!gl) return;
+
+    if (astorb.depthBufferEnabled)
+    {
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthFunc(gl.LEQUAL);
+        gl.depthMask(true);
+        gl.clearDepth(1.0);
+    }
+    else
+    {
+        gl.disable(gl.DEPTH_TEST);
+        gl.depthMask(false);
+    }
 };
 
 astorb.initShaders = function(gl)
@@ -912,6 +934,23 @@ astorb.setupAsteroidControls = function()
     astorb.refreshAsteroidControls();
 };
 
+astorb.setupDepthBufferControls = function()
+{
+    var depthButton = document.getElementById('depthBufferButton');
+
+    if (depthButton)
+    {
+        depthButton.addEventListener('click', function() {
+            astorb.depthBufferEnabled = !astorb.depthBufferEnabled;
+            astorb.applyDepthBufferState();
+            astorb.refreshDepthBufferControls();
+            astorb.log("Depth buffer " + (astorb.depthBufferEnabled ? "enabled" : "disabled"), "blue");
+        });
+    }
+
+    astorb.refreshDepthBufferControls();
+};
+
 astorb.stats = null;
 astorb.initStats = function()
 {
@@ -973,6 +1012,16 @@ astorb.refreshAsteroidControls = function()
     if (doubleButton)
     {
         doubleButton.disabled = !total || current >= total;
+    }
+};
+
+astorb.refreshDepthBufferControls = function()
+{
+    var depthButton = document.getElementById('depthBufferButton');
+
+    if (depthButton)
+    {
+        depthButton.textContent = "Depth: " + (astorb.depthBufferEnabled ? "On" : "Off");
     }
 };
 
