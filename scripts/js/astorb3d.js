@@ -559,7 +559,7 @@ astorb.computeKeplerPosition = function(orbit, timeSec)
     var M = (n * timeSec + M0) % (2.0 * Math.PI);
 
     var E = M;
-    for (var iteration = 0; iteration < 20; iteration++)
+    for (var iteration = 0; iteration < 30; iteration++)
     {
         E = E - (E - e * Math.sin(E) - M) / (1.0 - e * Math.cos(E));
     }
