@@ -1,6 +1,6 @@
 // astorb_line.js
 // astorb3d
-// by John Shaffstall
+// by John W. Shaffstall
 // Tuesday, October 15, 2013
 
 var AstorbLineLength = 267;
