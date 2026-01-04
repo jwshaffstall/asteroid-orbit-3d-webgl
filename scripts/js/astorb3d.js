@@ -981,7 +981,7 @@ astorb.colorModes = [
     {id: 1, label: "Color: Orbit Shape"},
     {id: 2, label: "Color: Camera Depth"}
 ];
-astorb.colorModeIndex = 1;
+astorb.colorModeIndex = 0;
 
 astorb.applyColorMode = function()
 {

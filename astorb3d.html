@@ -256,8 +256,15 @@
         }
         else if (uColorMode == 2)
         {
-            float normalizedDepth = log(1.0 + vViewDistance) / log(1.0 + max(uFarPlaneAU, 0.1));
-            float brightness = clamp(1.0 - normalizedDepth, 0.15, 1.0);
+            // Faster logarithmic falloff with brighter near-camera appearance
+            // Using a steeper logarithmic curve for more dramatic depth perception
+            float logDepth = log(1.0 + vViewDistance * 2.5);
+            float maxLogDepth = log(1.0 + max(uFarPlaneAU, 0.1) * 2.5);
+            float normalizedDepth = clamp(logDepth / maxLogDepth, 0.0, 1.0);
+
+            // Apply power curve for faster falloff and boost brightness near camera
+            float brightness = pow(1.0 - normalizedDepth, 2.2);
+            brightness = clamp(brightness * 1.3, 0.05, 1.0);
             color = vec3(brightness);
         }
         else
