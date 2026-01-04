@@ -806,7 +806,7 @@ astorb.setupCameraControls = function(canvas)
             var deltaY = touch.clientY - touchState.lastY;
 
             var rotateSpeed = 0.005;
-            camera.azimuth -= deltaX * rotateSpeed;
+            camera.azimuth += deltaX * rotateSpeed;
             camera.elevation += deltaY * rotateSpeed;
 
             var maxElev = camera.maxElevationRadians || (80.0 * Math.PI / 180.0);
