@@ -62,7 +62,13 @@ astorb.updateProjectionMatrix = function()
     var farPlaneAU = 300.0;
     mat4.perspective(perspectiveMatrix, cameraFieldOfViewRadians, aspectRatio, nearPlaneAU, farPlaneAU);
 
+    gl.useProgram(astorb.asteroidProgram);
     gl.uniformMatrix4fv(astorb.pUniform, false, perspectiveMatrix);
+    if (astorb.bodyUniforms)
+    {
+        gl.useProgram(astorb.bodyProgram);
+        gl.uniformMatrix4fv(astorb.bodyUniforms.pMatrix, false, perspectiveMatrix);
+    }
 };
 
 astorb.logDivId = "astorbLog";
@@ -149,6 +155,7 @@ astorb.initWebGL = function(gl, canvas)
         astorb.resizeWebGL();
 
         astorb.initShaders(gl);
+        astorb.initBodyShaders(gl);
         astorb.initBuffers(gl);
 
         success = true;
@@ -180,7 +187,7 @@ astorb.initShaders = function(gl)
     }
 
     gl.useProgram(shaderProgram);
-    astorb.shaderProgram = shaderProgram;
+    astorb.asteroidProgram = shaderProgram;
 
     var aSemimajorAxis = gl.getAttribLocation(shaderProgram, "aSemimajorAxis");
     var aEccentricity = gl.getAttribLocation(shaderProgram, "aEccentricity");
@@ -207,6 +214,34 @@ astorb.initShaders = function(gl)
     astorb.aArgumentOfPerihelion = aArgumentOfPerihelion;
     astorb.aLongitudeOfAscendingNode = aLongitudeOfAscendingNode;
     astorb.aMeanAnomaly = aMeanAnomaly;
+};
+
+astorb.initBodyShaders = function(gl)
+{
+    var fragmentShader = astorb.getShader(gl, "shader-bodies-fs");
+    var vertexShader = astorb.getShader(gl, "shader-bodies-vs");
+
+    var shaderProgram = gl.createProgram();
+    gl.attachShader(shaderProgram, vertexShader);
+    gl.attachShader(shaderProgram, fragmentShader);
+    gl.linkProgram(shaderProgram);
+
+    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS))
+    {
+        astorb.log("Unable to initialize the body shader program: " + gl.getProgramInfoLog(shaderProgram), "red");
+    }
+
+    astorb.bodyProgram = shaderProgram;
+    astorb.bodyAttributes = {
+        position: gl.getAttribLocation(shaderProgram, "aPosition"),
+        radius: gl.getAttribLocation(shaderProgram, "aRadius"),
+        color: gl.getAttribLocation(shaderProgram, "aColor")
+    };
+    astorb.bodyUniforms = {
+        mvMatrix: gl.getUniformLocation(shaderProgram, "uMVMatrix"),
+        pMatrix: gl.getUniformLocation(shaderProgram, "uPMatrix"),
+        pointScale: gl.getUniformLocation(shaderProgram, "uPointScale")
+    };
 };
 
 astorb.getShader = function(gl, shaderId)
@@ -363,7 +398,8 @@ astorb.initBuffers = function(gl)
     var farPlaneAU = 300.0;
     mat4.perspective(perspectiveMatrix, cameraFieldOfViewRadians, aspectRatio, nearPlaneAU, farPlaneAU);
 
-    var shaderProgram = astorb.shaderProgram;
+    gl.useProgram(astorb.asteroidProgram);
+    var shaderProgram = astorb.asteroidProgram;
     var pUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
     astorb.pUniform = pUniform;
     gl.uniformMatrix4fv(pUniform, false, perspectiveMatrix);
@@ -371,11 +407,19 @@ astorb.initBuffers = function(gl)
     astorb.mvUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
     astorb.timeUniform = gl.getUniformLocation(shaderProgram, "time");
 
+    if (astorb.bodyUniforms)
+    {
+        gl.useProgram(astorb.bodyProgram);
+        gl.uniformMatrix4fv(astorb.bodyUniforms.pMatrix, false, perspectiveMatrix);
+        gl.uniform1f(astorb.bodyUniforms.pointScale, astorb.bodyScale);
+    }
+
     // Set up camera controls
     astorb.setupCameraControls(canvas);
 
     // Initialize planet orbit paths
     astorb.initPlanetOrbits(gl);
+    astorb.initBodies(gl);
 
     // Update the view matrix initially
     astorb.updateViewMatrix();
@@ -419,6 +463,37 @@ astorb.planetOrbits = [
     {name: "Neptune", a: 30.06992276, e: 0.00859048, i: 1.77004347, w: 273.187, O: 131.78422574, M: 256.228}
 ];
 
+astorb.constants = {
+    auKm: 149597870.7,
+    muSun: 3.96401599E-14
+};
+
+astorb.bodyScale = 300000.0;
+
+astorb.bodies = [
+    {name: "Sun", type: "sun", radiusKm: 696340, color: [1.0, 0.85, 0.3]}
+];
+
+astorb.planetBodies = [
+    {name: "Mercury", radiusKm: 2439.7, color: [0.7, 0.7, 0.7]},
+    {name: "Venus", radiusKm: 6051.8, color: [0.9, 0.75, 0.5]},
+    {name: "Earth", radiusKm: 6371.0, color: [0.3, 0.5, 1.0]},
+    {name: "Mars", radiusKm: 3389.5, color: [0.9, 0.4, 0.2]},
+    {name: "Jupiter", radiusKm: 69911, color: [0.9, 0.8, 0.6]},
+    {name: "Saturn", radiusKm: 58232, color: [0.9, 0.8, 0.5]},
+    {name: "Uranus", radiusKm: 25362, color: [0.6, 0.8, 0.9]},
+    {name: "Neptune", radiusKm: 24622, color: [0.3, 0.5, 0.9]}
+];
+
+astorb.moonBodies = [
+    {name: "Moon", parent: "Earth", radiusKm: 1737.4, semiMajorAxisKm: 384400, periodDays: 27.321661, color: [0.8, 0.8, 0.85]},
+    {name: "Phobos", parent: "Mars", radiusKm: 11.3, semiMajorAxisKm: 9376, periodDays: 0.31891, color: [0.7, 0.7, 0.7]},
+    {name: "Ganymede", parent: "Jupiter", radiusKm: 2634.1, semiMajorAxisKm: 1070400, periodDays: 7.154553, color: [0.75, 0.7, 0.6]},
+    {name: "Titan", parent: "Saturn", radiusKm: 2574.7, semiMajorAxisKm: 1221870, periodDays: 15.945, color: [0.85, 0.7, 0.5]},
+    {name: "Titania", parent: "Uranus", radiusKm: 788.9, semiMajorAxisKm: 435910, periodDays: 8.706, color: [0.7, 0.8, 0.9]},
+    {name: "Triton", parent: "Neptune", radiusKm: 1353.4, semiMajorAxisKm: 354759, periodDays: -5.87685, color: [0.7, 0.8, 0.9]}
+];
+
 astorb.initPlanetOrbits = function(gl)
 {
     var segments = 240;
@@ -455,6 +530,123 @@ astorb.initPlanetOrbits = function(gl)
     astorb.planetOrbitBuffer = orbitBuffer;
     astorb.planetOrbitOffsets = offsets;
     astorb.planetOrbitSegments = segments;
+};
+
+astorb.initBodies = function(gl)
+{
+    var bodyList = astorb.bodies.concat(astorb.planetBodies, astorb.moonBodies);
+    astorb.bodyList = bodyList;
+    astorb.bodyCount = bodyList.length;
+
+    var bodyBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, bodyBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(astorb.bodyCount * 7), gl.DYNAMIC_DRAW);
+    astorb.bodyBuffer = bodyBuffer;
+};
+
+astorb.computeKeplerPosition = function(orbit, timeSec)
+{
+    var deg2rad = Math.PI / 180.0;
+    var a = orbit.a;
+    var e = orbit.e;
+    var i = orbit.i * deg2rad;
+    var omega = orbit.w * deg2rad;
+    var sigma = orbit.O * deg2rad;
+    var M0 = orbit.M * deg2rad;
+    var muSun = astorb.constants.muSun;
+
+    var n = Math.sqrt(muSun / Math.pow(a, 3.0));
+    var M = (n * timeSec + M0) % (2.0 * Math.PI);
+
+    var E = M;
+    for (var iteration = 0; iteration < 30; iteration++)
+    {
+        E = E - (E - e * Math.sin(E) - M) / (1.0 - e * Math.cos(E));
+    }
+    var r = a * (1.0 - e * Math.cos(E));
+    var nu = 2.0 * Math.atan2(Math.sqrt(1.0 + e) * Math.sin(E / 2.0),
+        Math.sqrt(1.0 - e) * Math.cos(E / 2.0));
+
+    var theta = omega + nu;
+
+    var x = r * (Math.cos(sigma) * Math.cos(theta) - Math.sin(sigma) * Math.sin(theta) * Math.cos(i));
+    var y = r * (Math.sin(sigma) * Math.cos(theta) + Math.cos(sigma) * Math.sin(theta) * Math.cos(i));
+    var z = r * (Math.sin(i) * Math.sin(theta));
+
+    return [x, y, z];
+};
+
+astorb.computeMoonPosition = function(moon, parentPosition, timeSec)
+{
+    var periodSec = Math.abs(moon.periodDays) * 24.0 * 3600.0;
+    var direction = moon.periodDays < 0 ? -1.0 : 1.0;
+    var meanMotion = (2.0 * Math.PI / periodSec) * direction;
+    var meanAnomaly = meanMotion * timeSec;
+    var distanceAu = moon.semiMajorAxisKm / astorb.constants.auKm;
+
+    var x = distanceAu * Math.cos(meanAnomaly);
+    var y = distanceAu * Math.sin(meanAnomaly);
+    var z = 0.0;
+
+    return [
+        parentPosition[0] + x,
+        parentPosition[1] + y,
+        parentPosition[2] + z
+    ];
+};
+
+astorb.updateBodies = function(timeSec)
+{
+    var gl = astorb.gl;
+    if (!astorb.bodyBuffer) return;
+
+    var bodyData = new Float32Array(astorb.bodyCount * 7);
+    var cursor = 0;
+
+    var positions = {};
+
+    bodyData[cursor++] = 0.0;
+    bodyData[cursor++] = 0.0;
+    bodyData[cursor++] = 0.0;
+    bodyData[cursor++] = astorb.bodies[0].radiusKm / astorb.constants.auKm;
+    bodyData[cursor++] = astorb.bodies[0].color[0];
+    bodyData[cursor++] = astorb.bodies[0].color[1];
+    bodyData[cursor++] = astorb.bodies[0].color[2];
+    positions["Sun"] = [0.0, 0.0, 0.0];
+
+    for (var planetIndex = 0; planetIndex < astorb.planetBodies.length; planetIndex++)
+    {
+        var planet = astorb.planetBodies[planetIndex];
+        var orbit = astorb.planetOrbits[planetIndex];
+        var position = astorb.computeKeplerPosition(orbit, timeSec);
+        positions[planet.name] = position;
+
+        bodyData[cursor++] = position[0];
+        bodyData[cursor++] = position[1];
+        bodyData[cursor++] = position[2];
+        bodyData[cursor++] = planet.radiusKm / astorb.constants.auKm;
+        bodyData[cursor++] = planet.color[0];
+        bodyData[cursor++] = planet.color[1];
+        bodyData[cursor++] = planet.color[2];
+    }
+
+    for (var moonIndex = 0; moonIndex < astorb.moonBodies.length; moonIndex++)
+    {
+        var moon = astorb.moonBodies[moonIndex];
+        var parentPosition = positions[moon.parent] || [0.0, 0.0, 0.0];
+        var moonPosition = astorb.computeMoonPosition(moon, parentPosition, timeSec);
+
+        bodyData[cursor++] = moonPosition[0];
+        bodyData[cursor++] = moonPosition[1];
+        bodyData[cursor++] = moonPosition[2];
+        bodyData[cursor++] = moon.radiusKm / astorb.constants.auKm;
+        bodyData[cursor++] = moon.color[0];
+        bodyData[cursor++] = moon.color[1];
+        bodyData[cursor++] = moon.color[2];
+    }
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, astorb.bodyBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, bodyData, gl.DYNAMIC_DRAW);
 };
 
 astorb.setupCameraControls = function(canvas)
@@ -622,7 +814,14 @@ astorb.updateViewMatrix = function()
     mat4.rotateX(mvMatrix, mvMatrix, camera.rotationX);
     mat4.rotateY(mvMatrix, mvMatrix, camera.rotationY);
 
+    gl.useProgram(astorb.asteroidProgram);
     gl.uniformMatrix4fv(astorb.mvUniform, false, mvMatrix);
+
+    if (astorb.bodyUniforms)
+    {
+        gl.useProgram(astorb.bodyProgram);
+        gl.uniformMatrix4fv(astorb.bodyUniforms.mvMatrix, false, mvMatrix);
+    }
 };
 
 astorb.animate = function(timestamp)
@@ -647,7 +846,10 @@ astorb.animate = function(timestamp)
     }
 
     // Update time uniform
+    gl.useProgram(astorb.asteroidProgram);
     gl.uniform1f(astorb.timeUniform, time.simTime);
+
+    astorb.updateBodies(time.simTime);
 
     // Update camera view matrix every frame
     astorb.updateViewMatrix();
@@ -675,6 +877,7 @@ astorb.animate = function(timestamp)
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     if (astorb.planetOrbitBuffer)
     {
+        gl.useProgram(astorb.asteroidProgram);
         gl.bindBuffer(gl.ARRAY_BUFFER, astorb.planetOrbitBuffer);
         astorb.configureAttributePointers(gl);
         gl.uniform1f(astorb.timeUniform, 0);
@@ -686,6 +889,25 @@ astorb.animate = function(timestamp)
         }
     }
 
+    if (astorb.bodyBuffer && astorb.bodyProgram)
+    {
+        gl.useProgram(astorb.bodyProgram);
+        gl.bindBuffer(gl.ARRAY_BUFFER, astorb.bodyBuffer);
+
+        var bodyAttributes = astorb.bodyAttributes;
+        var stride = 7 * 4;
+        gl.enableVertexAttribArray(bodyAttributes.position);
+        gl.enableVertexAttribArray(bodyAttributes.radius);
+        gl.enableVertexAttribArray(bodyAttributes.color);
+        gl.vertexAttribPointer(bodyAttributes.position, 3, gl.FLOAT, false, stride, 0);
+        gl.vertexAttribPointer(bodyAttributes.radius, 1, gl.FLOAT, false, stride, 12);
+        gl.vertexAttribPointer(bodyAttributes.color, 3, gl.FLOAT, false, stride, 16);
+        gl.uniform1f(astorb.bodyUniforms.pointScale, astorb.bodyScale);
+
+        gl.drawArrays(gl.POINTS, 0, astorb.bodyCount);
+    }
+
+    gl.useProgram(astorb.asteroidProgram);
     gl.bindBuffer(gl.ARRAY_BUFFER, astorb.astorbBuffer);
     astorb.configureAttributePointers(gl);
     gl.uniform1f(astorb.timeUniform, time.simTime);
