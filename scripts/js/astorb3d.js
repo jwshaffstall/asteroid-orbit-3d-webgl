@@ -125,6 +125,7 @@ astorb.onLoadBody = function()
                 }
 
                 astorb.setupTimeControls();
+                astorb.setupAsteroidControls();
                 astorb.initStats();
                 astorb.loadAstorbData();
             }
@@ -345,6 +346,8 @@ astorb.onLoadAstorbData = function(errorCode, response)
         var asteroidCount = astorbFloatCount / floatsPerAsteroid;
         astorb.log("asteroid count = " + asteroidCount, "black");
         astorb.asteroidCount = asteroidCount;
+        astorb.asteroidDrawCount = asteroidCount;
+        astorb.refreshAsteroidControls();
 
         // Debug: log first asteroid's orbital elements
         if (asteroidCount > 0) {
@@ -396,6 +399,7 @@ astorb.dataLoaded = false;
 astorb.firstFrameRendered = false;
 window.__astorbDataLoaded = false;
 window.__astorbFirstFrameRendered = false;
+astorb.asteroidDrawCount = 0;
 
 astorb.initBuffers = function(gl)
 {
@@ -858,6 +862,40 @@ astorb.setupTimeControls = function()
     astorb.refreshTimeControls();
 };
 
+astorb.setupAsteroidControls = function()
+{
+    var halfButton = document.getElementById('asteroidHalfButton');
+    var doubleButton = document.getElementById('asteroidDoubleButton');
+
+    if (halfButton)
+    {
+        halfButton.addEventListener('click', function() {
+            var total = astorb.asteroidCount || 0;
+            if (!total) return;
+            var current = astorb.asteroidDrawCount || total;
+            var nextCount = Math.max(1, Math.floor(current / 2));
+            astorb.asteroidDrawCount = nextCount;
+            astorb.log("Asteroid draw count: " + nextCount + " / " + total, "blue");
+            astorb.refreshAsteroidControls();
+        });
+    }
+
+    if (doubleButton)
+    {
+        doubleButton.addEventListener('click', function() {
+            var total = astorb.asteroidCount || 0;
+            if (!total) return;
+            var current = astorb.asteroidDrawCount || total;
+            var nextCount = Math.min(total, current * 2);
+            astorb.asteroidDrawCount = nextCount;
+            astorb.log("Asteroid draw count: " + nextCount + " / " + total, "blue");
+            astorb.refreshAsteroidControls();
+        });
+    }
+
+    astorb.refreshAsteroidControls();
+};
+
 astorb.stats = null;
 astorb.initStats = function()
 {
@@ -886,6 +924,37 @@ astorb.refreshTimeControls = function()
     if (timeScaleLabel)
     {
         timeScaleLabel.textContent = "Speed: " + astorb.time.timeScale.toExponential(1) + "x";
+    }
+};
+
+astorb.refreshAsteroidControls = function()
+{
+    var halfButton = document.getElementById('asteroidHalfButton');
+    var doubleButton = document.getElementById('asteroidDoubleButton');
+    var asteroidCountLabel = document.getElementById('asteroidCountLabel');
+    var total = astorb.asteroidCount || 0;
+    var current = astorb.asteroidDrawCount || 0;
+
+    if (asteroidCountLabel)
+    {
+        if (total)
+        {
+            asteroidCountLabel.textContent = "Asteroids: " + current + " / " + total;
+        }
+        else
+        {
+            asteroidCountLabel.textContent = "Asteroids: --";
+        }
+    }
+
+    if (halfButton)
+    {
+        halfButton.disabled = !total || current <= 1;
+    }
+
+    if (doubleButton)
+    {
+        doubleButton.disabled = !total || current >= total;
     }
 };
 
@@ -918,6 +987,7 @@ astorb.animate = function(timestamp)
 {
     var gl = astorb.gl;
     var asteroidCount = astorb.asteroidCount;
+    var asteroidDrawCount = astorb.asteroidDrawCount || asteroidCount;
     var time = astorb.time;
     var stats = astorb.stats;
 
@@ -958,7 +1028,7 @@ astorb.animate = function(timestamp)
             var years = time.simTime / (365.25 * 24 * 3600);  // Convert seconds to years
             var pauseStatus = time.paused ? "[PAUSED]" : "[RUNNING]";
             statusDiv.innerHTML = pauseStatus + " Time: " + years.toFixed(2) + " years | " +
-                "Asteroids: " + asteroidCount + " | " +
+                "Asteroids: " + asteroidDrawCount + " / " + asteroidCount + " | " +
                 "Camera: distance=" + astorb.camera.distance.toFixed(1) + " AU | " +
                 "Speed: " + time.timeScale.toExponential(1) + "x | " +
                 "Controls: Drag=rotate, Scroll/pinch=zoom, Space=pause, Up/Down=speed, R=reset";
@@ -1008,7 +1078,7 @@ astorb.animate = function(timestamp)
     gl.bindBuffer(gl.ARRAY_BUFFER, astorb.astorbBuffer);
     astorb.configureAttributePointers(gl);
     gl.uniform1f(astorb.timeUniform, time.simTime);
-    gl.drawArrays(gl.POINTS, 0, asteroidCount);
+    gl.drawArrays(gl.POINTS, 0, asteroidDrawCount);
 
     if (!astorb.firstFrameRendered && astorb.dataLoaded)
     {
