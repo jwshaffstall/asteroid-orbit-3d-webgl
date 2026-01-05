@@ -143,6 +143,7 @@
     <button id="asteroidHalfButton" type="button">Half Asteroids</button>
     <button id="asteroidDoubleButton" type="button">Double Asteroids</button>
     <button id="depthBufferButton" type="button">Depth: --</button>
+    <button id="motionBlurButton" type="button">Motion Blur: --</button>
     <button id="renderColorButton" type="button">Color: --</button>
     <span id="timeScaleLabel">Speed: --</span>
     <span id="asteroidCountLabel">Asteroids: --</span>
@@ -177,6 +178,7 @@
     varying float vEccentricity;
     varying float vInclination;
     varying float vViewDistance;
+    uniform float uOpacity;
 
     void main(void)
     {
@@ -289,7 +291,7 @@
             color = mix(vec3(luma), color, 1.1);
             color = clamp(color, 0.0, 1.0);
         }
-        gl_FragColor = vec4(color, 1.0);
+        gl_FragColor = vec4(color, uOpacity);
     }
 </script>
 <script type="x-shader/x-vertex" id="shader-bodies-vs">
@@ -322,6 +324,7 @@
     precision mediump float;
 
     varying vec3 vColor;
+    uniform float uOpacity;
 
     void main(void)
     {
@@ -330,7 +333,7 @@
         if (r > 1.0) discard;
 
         float lighting = 0.35 + 0.65 * sqrt(1.0 - r);
-        gl_FragColor = vec4(vColor * lighting, 1.0);
+        gl_FragColor = vec4(vColor * lighting, uOpacity);
     }
 </script>
 </body>
