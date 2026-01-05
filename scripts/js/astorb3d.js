@@ -1014,9 +1014,11 @@ astorb.setupMotionBlurControls = function()
 astorb.colorModes = [
     {id: 0, label: "Color: XYZ"},
     {id: 1, label: "Color: Orbit Shape"},
-    {id: 2, label: "Color: Camera Depth"}
+    {id: 2, label: "Color: Camera Depth"},
+    {id: 3, label: "Color: Angular Velocity"},
+    {id: 4, label: "Color: Orbital Energy"}
 ];
-astorb.colorModeIndex = 0;
+astorb.colorModeIndex = 3;
 
 astorb.applyColorMode = function()
 {
