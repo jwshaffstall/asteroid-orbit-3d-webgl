@@ -30,6 +30,119 @@ astorb.formatAsteroidPercent = function(current, total)
     return percent.toFixed(1) + "%";
 };
 
+astorb.formatBytes = function(bytes)
+{
+    if (bytes === null || bytes === undefined || isNaN(bytes))
+    {
+        return "--";
+    }
+    if (bytes === 0)
+    {
+        return "0 B";
+    }
+    var units = ["B", "KB", "MB", "GB", "TB"];
+    var index = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
+    var value = bytes / Math.pow(1024, index);
+    return value.toFixed(value >= 10 || index === 0 ? 0 : 1) + " " + units[index];
+};
+
+astorb.formatBitsPerSecond = function(bitsPerSecond)
+{
+    if (!bitsPerSecond || !isFinite(bitsPerSecond))
+    {
+        return "--";
+    }
+    var units = ["bps", "Kbps", "Mbps", "Gbps"];
+    var index = Math.min(units.length - 1, Math.floor(Math.log(bitsPerSecond) / Math.log(1000)));
+    var value = bitsPerSecond / Math.pow(1000, index);
+    return value.toFixed(value >= 10 || index === 0 ? 0 : 1) + " " + units[index];
+};
+
+astorb.initLoadingOverlay = function()
+{
+    var overlay = document.getElementById("loadingOverlay");
+    var indicator = document.querySelector("#loadingProgress .indicator");
+    if (!overlay || !indicator)
+    {
+        return null;
+    }
+
+    var radius = parseFloat(indicator.getAttribute("r")) || 0;
+    var circumference = 2 * Math.PI * radius;
+    indicator.style.strokeDasharray = circumference;
+    indicator.style.strokeDashoffset = circumference;
+
+    astorb.loadingElements = {
+        overlay: overlay,
+        indicator: indicator,
+        circumference: circumference,
+        percentage: document.getElementById("loadingPercentage"),
+        rate: document.getElementById("loadingRate"),
+        size: document.getElementById("loadingSize"),
+        downloaded: document.getElementById("loadingDownloaded")
+    };
+
+    return astorb.loadingElements;
+};
+
+astorb.showLoadingOverlay = function()
+{
+    var elements = astorb.loadingElements || astorb.initLoadingOverlay();
+    if (!elements)
+    {
+        return;
+    }
+    elements.overlay.classList.remove("hidden");
+    astorb.loadingState = {
+        startTime: performance.now(),
+        totalBytes: null
+    };
+    astorb.updateLoadingOverlay(0, null);
+};
+
+astorb.updateLoadingOverlay = function(loaded, total)
+{
+    var elements = astorb.loadingElements;
+    if (!elements)
+    {
+        return;
+    }
+    var percent = total ? (loaded / total) * 100 : 0;
+    var clampedPercent = Math.max(0, Math.min(100, percent));
+    var offset = elements.circumference * (1 - clampedPercent / 100);
+    elements.indicator.style.strokeDashoffset = offset;
+
+    var elapsedSeconds = (performance.now() - astorb.loadingState.startTime) / 1000;
+    var bitsPerSecond = elapsedSeconds > 0 ? (loaded * 8) / elapsedSeconds : 0;
+
+    if (elements.percentage)
+    {
+        elements.percentage.textContent = clampedPercent.toFixed(1) + "%";
+    }
+    if (elements.rate)
+    {
+        elements.rate.textContent = "Rate: " + astorb.formatBitsPerSecond(bitsPerSecond);
+    }
+    if (elements.size)
+    {
+        elements.size.textContent = "Total: " + astorb.formatBytes(total);
+    }
+    if (elements.downloaded)
+    {
+        elements.downloaded.textContent = "Downloaded: " + astorb.formatBytes(loaded);
+    }
+};
+
+astorb.hideLoadingOverlay = function()
+{
+    var elements = astorb.loadingElements;
+    if (!elements)
+    {
+        return;
+    }
+    elements.overlay.classList.add("hidden");
+};
+
 // Resize canvas drawing buffer + viewport to match CSS size.
 astorb.resizeWebGL = function()
 {
@@ -346,13 +459,15 @@ astorb.loadAstorbData = function()
 {
     var resourcePath = astorb.resourcePath;
     astorb.log("loading '" + resourcePath + "'", "blue");
-    astorb.loader = new astorb.Loader(resourcePath, astorb.onLoadAstorbData);
+    astorb.showLoadingOverlay();
+    astorb.loader = new astorb.Loader(resourcePath, astorb.onLoadAstorbData, astorb.updateLoadingOverlay);
 };
 
-astorb.Loader = function(path, callback)
+astorb.Loader = function(path, callback, progressCallback)
 {
     this.path = path || null;
     var callback = callback || function(){};
+    var progressCallback = progressCallback || function(){};
 
     var request = new XMLHttpRequest();
     this.request = request;
@@ -369,6 +484,12 @@ astorb.Loader = function(path, callback)
         }
     };
 
+    request.onprogress = function(event)
+    {
+        var totalBytes = event.lengthComputable ? event.total : null;
+        progressCallback(event.loaded, totalBytes);
+    };
+
     request.send();
 };
 
@@ -379,6 +500,7 @@ astorb.onLoadAstorbData = function(errorCode, response)
         && response instanceof ArrayBuffer)
     {
         astorb.log("loaded astorb data", "green");
+        astorb.hideLoadingOverlay();
         astorb.dataLoaded = true;
         window.__astorbDataLoaded = true;
         document.dispatchEvent(new CustomEvent('astorb:data-loaded'));
@@ -416,6 +538,7 @@ astorb.onLoadAstorbData = function(errorCode, response)
     else
     {
         astorb.log("failed to load astorb data", "red");
+        astorb.hideLoadingOverlay();
     }
 };
 
