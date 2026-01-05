@@ -148,6 +148,7 @@ astorb.onLoadBody = function()
                 astorb.setupTimeControls();
                 astorb.setupAsteroidControls();
                 astorb.setupDepthBufferControls();
+                astorb.setupMotionBlurControls();
                 astorb.setupRenderColorControls();
                 astorb.initStats();
                 astorb.loadAstorbData();
@@ -173,7 +174,7 @@ astorb.initWebGL = function(gl, canvas)
     {
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
         astorb.applyDepthBufferState();
-        // gl.enable(gl.BLEND);
+        gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -285,7 +286,8 @@ astorb.initBodyShaders = function(gl)
     astorb.bodyUniforms = {
         mvMatrix: gl.getUniformLocation(shaderProgram, "uMVMatrix"),
         pMatrix: gl.getUniformLocation(shaderProgram, "uPMatrix"),
-        pointScale: gl.getUniformLocation(shaderProgram, "uPointScale")
+        pointScale: gl.getUniformLocation(shaderProgram, "uPointScale"),
+        opacity: gl.getUniformLocation(shaderProgram, "uOpacity")
     };
 };
 
@@ -441,6 +443,14 @@ astorb.time = {
     paused: false
 };
 
+astorb.motionBlur = {
+    enabled: false,
+    sampleCount: 5,
+    spanMultiplier: 6,
+    maxSpanSeconds: 24 * 60 * 60,
+    opacity: 0.4
+};
+
 astorb.dataLoaded = false;
 astorb.firstFrameRendered = false;
 window.__astorbDataLoaded = false;
@@ -469,6 +479,7 @@ astorb.initBuffers = function(gl)
     astorb.timeUniform = gl.getUniformLocation(shaderProgram, "time");
     astorb.colorModeUniform = gl.getUniformLocation(shaderProgram, "uColorMode");
     astorb.farPlaneUniform = gl.getUniformLocation(shaderProgram, "uFarPlaneAU");
+    astorb.opacityUniform = gl.getUniformLocation(shaderProgram, "uOpacity");
 
     if (astorb.colorModeUniform !== null)
     {
@@ -478,12 +489,20 @@ astorb.initBuffers = function(gl)
     {
         gl.uniform1f(astorb.farPlaneUniform, astorb.farPlaneAU);
     }
+    if (astorb.opacityUniform !== null)
+    {
+        gl.uniform1f(astorb.opacityUniform, 1.0);
+    }
 
     if (astorb.bodyUniforms)
     {
         gl.useProgram(astorb.bodyProgram);
         gl.uniformMatrix4fv(astorb.bodyUniforms.pMatrix, false, perspectiveMatrix);
         gl.uniform1f(astorb.bodyUniforms.pointScale, astorb.bodyScale);
+        if (astorb.bodyUniforms.opacity !== null)
+        {
+            gl.uniform1f(astorb.bodyUniforms.opacity, 1.0);
+        }
     }
 
     // Set up camera controls
@@ -976,12 +995,30 @@ astorb.setupDepthBufferControls = function()
     astorb.refreshDepthBufferControls();
 };
 
+astorb.setupMotionBlurControls = function()
+{
+    var motionBlurButton = document.getElementById('motionBlurButton');
+
+    if (motionBlurButton)
+    {
+        motionBlurButton.addEventListener('click', function() {
+            astorb.motionBlur.enabled = !astorb.motionBlur.enabled;
+            astorb.refreshMotionBlurControls();
+            astorb.log("Motion blur " + (astorb.motionBlur.enabled ? "enabled" : "disabled"), "blue");
+        });
+    }
+
+    astorb.refreshMotionBlurControls();
+};
+
 astorb.colorModes = [
     {id: 0, label: "Color: XYZ"},
     {id: 1, label: "Color: Orbit Shape"},
-    {id: 2, label: "Color: Camera Depth"}
+    {id: 2, label: "Color: Camera Depth"},
+    {id: 3, label: "Color: Angular Velocity"},
+    {id: 4, label: "Color: Orbital Energy"}
 ];
-astorb.colorModeIndex = 0;
+astorb.colorModeIndex = 3;
 
 astorb.applyColorMode = function()
 {
@@ -1081,6 +1118,16 @@ astorb.refreshDepthBufferControls = function()
     if (depthButton)
     {
         depthButton.textContent = "Depth: " + (astorb.depthBufferEnabled ? "On" : "Off");
+    }
+};
+
+astorb.refreshMotionBlurControls = function()
+{
+    var motionBlurButton = document.getElementById('motionBlurButton');
+
+    if (motionBlurButton)
+    {
+        motionBlurButton.textContent = "Motion Blur: " + (astorb.motionBlur.enabled ? "On" : "Off");
     }
 };
 
@@ -1195,6 +1242,7 @@ astorb.animate = function(timestamp)
     var asteroidDrawCount = astorb.asteroidDrawCount || asteroidCount;
     var time = astorb.time;
     var stats = astorb.stats;
+    var motionBlur = astorb.motionBlur;
 
     if (stats)
     {
@@ -1210,10 +1258,12 @@ astorb.animate = function(timestamp)
     }
     var deltaTime = (timestamp - time.lastTimestamp) / 1000.0;  // Convert to seconds
     time.lastTimestamp = timestamp;
+    var simDelta = 0;
 
     // Update simulation time if not paused
     if (!time.paused) {
-        time.simTime += deltaTime * time.timeScale;
+        simDelta = deltaTime * time.timeScale;
+        time.simTime += simDelta;
     }
 
     // Update time uniform
@@ -1253,6 +1303,10 @@ astorb.animate = function(timestamp)
         gl.bindBuffer(gl.ARRAY_BUFFER, astorb.planetOrbitBuffer);
         astorb.configureAttributePointers(gl);
         gl.uniform1f(astorb.timeUniform, 0);
+        if (astorb.opacityUniform !== null)
+        {
+            gl.uniform1f(astorb.opacityUniform, 1.0);
+        }
 
         for (var orbitIndex = 0; orbitIndex < astorb.planetOrbitOffsets.length; orbitIndex++)
         {
@@ -1275,6 +1329,10 @@ astorb.animate = function(timestamp)
         gl.vertexAttribPointer(bodyAttributes.radius, 1, gl.FLOAT, false, stride, 12);
         gl.vertexAttribPointer(bodyAttributes.color, 3, gl.FLOAT, false, stride, 16);
         gl.uniform1f(astorb.bodyUniforms.pointScale, astorb.bodyScale);
+        if (astorb.bodyUniforms.opacity !== null)
+        {
+            gl.uniform1f(astorb.bodyUniforms.opacity, 1.0);
+        }
 
         gl.drawArrays(gl.POINTS, 0, astorb.bodyCount);
     }
@@ -1282,8 +1340,31 @@ astorb.animate = function(timestamp)
     gl.useProgram(astorb.asteroidProgram);
     gl.bindBuffer(gl.ARRAY_BUFFER, astorb.astorbBuffer);
     astorb.configureAttributePointers(gl);
-    gl.uniform1f(astorb.timeUniform, time.simTime);
-    gl.drawArrays(gl.POINTS, 0, asteroidDrawCount);
+    var blurSamples = motionBlur.enabled ? motionBlur.sampleCount : 1;
+    var blurSpan = 0;
+    if (motionBlur.enabled && blurSamples > 1)
+    {
+        blurSpan = Math.min(motionBlur.maxSpanSeconds, Math.abs(simDelta) * motionBlur.spanMultiplier);
+    }
+    if (blurSpan === 0)
+    {
+        blurSamples = 1;
+    }
+    var blurActive = motionBlur.enabled && blurSamples > 1;
+    for (var sampleIndex = 0; sampleIndex < blurSamples; sampleIndex++)
+    {
+        var sampleBlend = blurSamples > 1 ? (sampleIndex / (blurSamples - 1)) : 0;
+        var sampleTime = time.simTime - (blurSpan * sampleBlend);
+        var weight = blurActive ? (1.0 - sampleBlend) : 1.0;
+        var opacity = blurActive ? (motionBlur.opacity * weight * weight) : 1.0;
+
+        gl.uniform1f(astorb.timeUniform, sampleTime);
+        if (astorb.opacityUniform !== null)
+        {
+            gl.uniform1f(astorb.opacityUniform, opacity);
+        }
+        gl.drawArrays(gl.POINTS, 0, asteroidDrawCount);
+    }
 
     if (!astorb.firstFrameRendered && astorb.dataLoaded)
     {

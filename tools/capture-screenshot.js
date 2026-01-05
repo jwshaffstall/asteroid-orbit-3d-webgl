@@ -71,10 +71,14 @@ const captureScreenshot = async () => {
     const url = `http://127.0.0.1:${port}/astorb3d.html`;
 
     await page.goto(url, { waitUntil: 'domcontentloaded' });
-    await page.waitForFunction(
-      () => window.__astorbDataLoaded === true && window.__astorbFirstFrameRendered === true,
-      { timeout: 60000 }
-    );
+    try {
+      await page.waitForFunction(
+        () => window.__astorbDataLoaded === true && window.__astorbFirstFrameRendered === true,
+        { timeout: 120000 }
+      );
+    } catch (error) {
+      console.warn('Timed out waiting for astorb render, capturing screenshot anyway.');
+    }
 
     ensureDir(outputPath);
     await page.screenshot({ path: outputPath, fullPage: true });

@@ -143,6 +143,7 @@
     <button id="asteroidHalfButton" type="button">Half Asteroids</button>
     <button id="asteroidDoubleButton" type="button">Double Asteroids</button>
     <button id="depthBufferButton" type="button">Depth: --</button>
+    <button id="motionBlurButton" type="button">Motion Blur: --</button>
     <button id="renderColorButton" type="button">Color: --</button>
     <span id="timeScaleLabel">Speed: --</span>
     <span id="asteroidCountLabel">Asteroids: --</span>
@@ -177,6 +178,9 @@
     varying float vEccentricity;
     varying float vInclination;
     varying float vViewDistance;
+    varying float vMeanMotion;
+    varying float vSemimajorAxis;
+    uniform float uOpacity;
 
     void main(void)
     {
@@ -225,6 +229,8 @@
         vViewDistance = length(mvPosition.xyz);
         vEccentricity = eccentricity;
         vInclination = inclination;
+        vMeanMotion = n;
+        vSemimajorAxis = semimajorAxis;
         gl_PointSize = 2.0;
     }
 </script>
@@ -233,6 +239,7 @@
 
     uniform int uColorMode;
     uniform float uFarPlaneAU;
+    uniform float uOpacity;
 
     varying float x;
     varying float y;
@@ -240,6 +247,8 @@
     varying float vEccentricity;
     varying float vInclination;
     varying float vViewDistance;
+    varying float vMeanMotion;
+    varying float vSemimajorAxis;
 
     void main(void)
     {
@@ -277,6 +286,50 @@
             brightness = clamp(brightness * 1.3, 0.05, 1.0);
             color = vec3(brightness);
         }
+        else if (uColorMode == 3)
+        {
+            // Angular Velocity mode: faster orbits (higher mean motion) = warmer colors
+            // Mean motion n = sqrt(mu/a^3) in rad/s, higher for closer orbits
+            // Typical range: ~1e-8 (outer belt) to ~5e-8 (inner belt)
+            float normalizedVelocity = clamp((vMeanMotion - 1.0e-8) / (4.0e-8), 0.0, 1.0);
+
+            // Use a heat map: slow (blue/purple) -> medium (green/yellow) -> fast (orange/red)
+            vec3 slowColor = vec3(0.2, 0.3, 0.9);    // Blue for slow
+            vec3 mediumColor = vec3(0.1, 0.9, 0.3);  // Green for medium
+            vec3 fastColor = vec3(1.0, 0.4, 0.1);    // Orange-red for fast
+
+            if (normalizedVelocity < 0.5)
+            {
+                color = mix(slowColor, mediumColor, normalizedVelocity * 2.0);
+            }
+            else
+            {
+                color = mix(mediumColor, fastColor, (normalizedVelocity - 0.5) * 2.0);
+            }
+        }
+        else if (uColorMode == 4)
+        {
+            // Orbital Energy mode: based on semi-major axis
+            // Smaller orbits = more bound = more negative orbital energy = warmer colors
+            // Asteroid belt roughly spans 2.0 AU to 4.0 AU
+            float normalizedEnergy = clamp((vSemimajorAxis - 1.5) / 4.0, 0.0, 1.0);
+
+            // Inner asteroids (high energy, small a): warm magenta/pink
+            // Middle asteroids: cyan/teal
+            // Outer asteroids (low energy, large a): cool deep blue
+            vec3 innerColor = vec3(1.0, 0.4, 0.7);   // Hot pink/magenta
+            vec3 middleColor = vec3(0.2, 0.9, 0.8);  // Cyan/teal
+            vec3 outerColor = vec3(0.1, 0.2, 0.6);   // Deep blue
+
+            if (normalizedEnergy < 0.4)
+            {
+                color = mix(innerColor, middleColor, normalizedEnergy / 0.4);
+            }
+            else
+            {
+                color = mix(middleColor, outerColor, (normalizedEnergy - 0.4) / 0.6);
+            }
+        }
         else
         {
             float dist = sqrt(x*x + y*y + z*z);
@@ -289,7 +342,7 @@
             color = mix(vec3(luma), color, 1.1);
             color = clamp(color, 0.0, 1.0);
         }
-        gl_FragColor = vec4(color, 1.0);
+        gl_FragColor = vec4(color, uOpacity);
     }
 </script>
 <script type="x-shader/x-vertex" id="shader-bodies-vs">
@@ -322,6 +375,7 @@
     precision mediump float;
 
     varying vec3 vColor;
+    uniform float uOpacity;
 
     void main(void)
     {
@@ -330,7 +384,7 @@
         if (r > 1.0) discard;
 
         float lighting = 0.35 + 0.65 * sqrt(1.0 - r);
-        gl_FragColor = vec4(vColor * lighting, 1.0);
+        gl_FragColor = vec4(vColor * lighting, uOpacity);
     }
 </script>
 </body>
