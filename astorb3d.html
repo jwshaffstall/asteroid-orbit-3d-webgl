@@ -62,6 +62,63 @@
         {
             outline: 2px solid #4CAF50;
         }
+        #canvasContainer
+        {
+            position: relative;
+            display: flex;
+            flex: 1 1 auto;
+            min-height: 0;
+        }
+        #loadingOverlay
+        {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.65);
+            color: #fff;
+            font-family: monospace;
+            flex-direction: column;
+            gap: 14px;
+            z-index: 2;
+        }
+        #loadingOverlay.hidden
+        {
+            display: none;
+        }
+        #loadingProgress
+        {
+            width: 140px;
+            height: 140px;
+            transform: rotate(-90deg);
+        }
+        #loadingProgress circle
+        {
+            fill: none;
+            stroke-width: 10;
+        }
+        #loadingProgress .track
+        {
+            stroke: rgba(255, 255, 255, 0.25);
+        }
+        #loadingProgress .indicator
+        {
+            stroke: #4CAF50;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.15s ease-out;
+        }
+        #loadingDetails
+        {
+            text-align: center;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        #loadingPercentage
+        {
+            font-size: 22px;
+            font-weight: bold;
+        }
         #statusDisplay
         {
             padding: 5px;
@@ -148,9 +205,23 @@
     <span id="timeScaleLabel">Speed: --</span>
     <span id="asteroidCountLabel">Asteroids: --</span>
 </div>
-<canvas id="astorb3dCanvas" tabindex="0">
-    Your browser doesn't appear to support the HTML5 <code>&lt;canvas&gt;</code> element.
-</canvas>
+<div id="canvasContainer">
+    <canvas id="astorb3dCanvas" tabindex="0">
+        Your browser doesn't appear to support the HTML5 <code>&lt;canvas&gt;</code> element.
+    </canvas>
+    <div id="loadingOverlay">
+        <svg id="loadingProgress" viewBox="0 0 120 120" aria-label="Loading progress">
+            <circle class="track" cx="60" cy="60" r="52"></circle>
+            <circle class="indicator" cx="60" cy="60" r="52"></circle>
+        </svg>
+        <div id="loadingDetails">
+            <div id="loadingPercentage">0%</div>
+            <div id="loadingRate">Rate: --</div>
+            <div id="loadingSize">Total: --</div>
+            <div id="loadingDownloaded">Downloaded: --</div>
+        </div>
+    </div>
+</div>
 <div id="statusDisplay">Status: Loading...</div>
 <div id="astorbLog"></div>
 <!-- <script src="scripts/js/libs/sylvester.src.js"></script> -->
