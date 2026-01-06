@@ -558,11 +558,20 @@ astorb.camera = {
     lastMouseY: 0
 };
 
+// Epoch configuration:
+// - planetEpochMs: epoch (J2000.0) used for planetary orbital elements, expressed as UTC milliseconds.
+// - asteroidEpochMs: epoch of the asteroid orbital elements catalog (October 15, 2013, 12:00 UTC).
+// These values are used so that planetary positions (computed from J2000.0 elements) can be
+// shifted to the asteroid elements epoch, ensuring all bodies start the simulation at the same
+// reference time.
 astorb.epoch = {
     planetEpochMs: Date.UTC(2000, 0, 1, 12, 0, 0),
     asteroidEpochMs: Date.UTC(2013, 9, 15, 12, 0, 0)
 };
 
+// Time offset (in seconds) between the planetary J2000.0 epoch and the asteroid elements epoch.
+// This is applied when computing planetary positions so they are aligned with the asteroid epoch
+// when the simulation starts.
 astorb.planetEpochOffsetSec = (astorb.epoch.asteroidEpochMs - astorb.epoch.planetEpochMs) / 1000.0;
 
 // Time control
