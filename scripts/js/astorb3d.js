@@ -777,6 +777,8 @@ astorb.getScaledRadiusAu = function(radiusKm)
 
 astorb.computeKeplerPosition = function(orbit, timeSec)
 {
+    // Adjust time so planet positions (using J2000.0 orbital elements) align with the asteroid epoch (2013-10-15),
+    // ensuring all bodies are computed for the same reference time.
     var adjustedTimeSec = timeSec + astorb.planetEpochOffsetSec;
     var deg2rad = Math.PI / 180.0;
     var a = orbit.a;
