@@ -1097,7 +1097,7 @@ astorb.setupTimeControls = function()
     {
         invertButton.addEventListener('click', function() {
             astorb.time.timeScale = -astorb.time.timeScale;
-            var directionLabel = astorb.time.timeScale >= 0 ? "forward" : "reverse";
+            var directionLabel = astorb.time.timeScale >= 0 ? "Forward" : "Reverse";
             astorb.log("Time direction: " + directionLabel, "blue");
             astorb.refreshTimeControls();
         });
