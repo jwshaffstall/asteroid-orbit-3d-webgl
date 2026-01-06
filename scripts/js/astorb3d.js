@@ -1090,6 +1090,7 @@ astorb.setupTimeControls = function()
         resetButton.addEventListener('click', function() {
             astorb.time.simTime = 0;
             astorb.log("Time reset to 0", "blue");
+            astorb.refreshTimeControls();
         });
     }
 
