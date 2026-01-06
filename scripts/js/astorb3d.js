@@ -1055,6 +1055,8 @@ astorb.setupTimeControls = function()
     var pauseButton = document.getElementById('pauseButton');
     var slowButton = document.getElementById('slowButton');
     var fastButton = document.getElementById('fastButton');
+    var resetButton = document.getElementById('resetTimeButton');
+    var invertButton = document.getElementById('invertTimeButton');
 
     if (pauseButton)
     {
@@ -1079,6 +1081,24 @@ astorb.setupTimeControls = function()
         fastButton.addEventListener('click', function() {
             astorb.time.timeScale *= 2;
             astorb.log("Time scale: " + astorb.time.timeScale.toExponential(1), "blue");
+            astorb.refreshTimeControls();
+        });
+    }
+
+    if (resetButton)
+    {
+        resetButton.addEventListener('click', function() {
+            astorb.time.simTime = 0;
+            astorb.log("Time reset to 0", "blue");
+        });
+    }
+
+    if (invertButton)
+    {
+        invertButton.addEventListener('click', function() {
+            astorb.time.timeScale = -astorb.time.timeScale;
+            var directionLabel = astorb.time.timeScale >= 0 ? "forward" : "reverse";
+            astorb.log("Time direction: " + directionLabel, "blue");
             astorb.refreshTimeControls();
         });
     }
@@ -1208,6 +1228,10 @@ astorb.refreshTimeControls = function()
 {
     var pauseButton = document.getElementById('pauseButton');
     var timeScaleLabel = document.getElementById('timeScaleLabel');
+    var invertButton = document.getElementById('invertTimeButton');
+    var timeScale = astorb.time.timeScale;
+    var directionLabel = timeScale >= 0 ? "Forward" : "Reverse";
+    var magnitude = Math.abs(timeScale);
 
     if (pauseButton)
     {
@@ -1216,7 +1240,12 @@ astorb.refreshTimeControls = function()
 
     if (timeScaleLabel)
     {
-        timeScaleLabel.textContent = "Speed: " + astorb.time.timeScale.toExponential(1) + "x";
+        timeScaleLabel.textContent = "Speed: " + magnitude.toExponential(1) + "x (" + directionLabel + ")";
+    }
+
+    if (invertButton)
+    {
+        invertButton.textContent = "Direction: " + directionLabel;
     }
 };
 
@@ -1424,11 +1453,12 @@ astorb.animate = function(timestamp)
         if (statusDiv) {
             var years = time.simTime / (365.25 * 24 * 3600);  // Convert seconds to years
             var pauseStatus = time.paused ? "[PAUSED]" : "[RUNNING]";
+            var directionLabel = time.timeScale >= 0 ? "Forward" : "Reverse";
             var percent = astorb.formatAsteroidPercent(asteroidDrawCount, asteroidCount);
             statusDiv.innerHTML = pauseStatus + " Time: " + years.toFixed(2) + " years | " +
                 "Asteroids: " + astorb.formatNumber(asteroidDrawCount) + " / " + astorb.formatNumber(asteroidCount) +
                 " (" + percent + ") | " +
-                "Speed: " + time.timeScale.toExponential(1) + "x";
+                "Speed: " + Math.abs(time.timeScale).toExponential(1) + "x (" + directionLabel + ")";
         }
     }
 
