@@ -277,7 +277,31 @@
         const float muSun = standardGravitationalParameterSun;
 
         float n = sqrt(muSun / pow(a, 3.0));
-        float M = mod(n * time + M0, two_pi);
+
+        // Jupiter resonance adjustments for Trojans/Greeks (1:1) and Hildas (3:2)
+        const float jupiterSemimajorAxis = 5.2044;
+        const float hildaSemimajorAxis = 3.97;
+        float nJ = sqrt(muSun / pow(jupiterSemimajorAxis, 3.0));
+        float trojanWeight = exp(-pow((a - jupiterSemimajorAxis) / 0.35, 2.0));
+        float hildaWeight = exp(-pow((a - hildaSemimajorAxis) / 0.30, 2.0));
+        float nResonant = mix(n, nJ, trojanWeight * 0.20);
+        nResonant = mix(nResonant, (2.0 / 3.0) * nJ, hildaWeight * 0.25);
+
+        float M = mod(nResonant * time + M0, two_pi);
+
+        float omegaBar = omega + sigma;
+        float lambdaJ = mod(nJ * time, two_pi);
+        float lambda = mod(M + omegaBar, two_pi);
+
+        float trojanAngle = mod(lambda - lambdaJ + pi, two_pi) - pi;
+        float trojanTarget = (trojanAngle >= 0.0) ? (pi / 3.0) : (-pi / 3.0);
+        float trojanDelta = trojanAngle - trojanTarget;
+        float trojanLibration = -0.05 * trojanWeight * sin(trojanDelta);
+
+        float hildaAngle = mod(3.0 * lambdaJ - 2.0 * lambda + pi, two_pi) - pi;
+        float hildaLibration = -0.04 * hildaWeight * sin(hildaAngle);
+
+        M = mod(M + trojanLibration + hildaLibration, two_pi);
 
         float E = M;  // Initialize E with mean anomaly for better convergence
         const int iterationCount = 30;
