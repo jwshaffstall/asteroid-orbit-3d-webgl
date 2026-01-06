@@ -548,7 +548,7 @@ astorb.camera = {
     // elevation: angle above/below the ecliptic plane. 0 = in plane, +80° = above, -80° = below.
     azimuth: 0.0,
     elevation: 20.0 * Math.PI / 180.0,  // Start slightly above the ecliptic plane
-    distance: 8.0,       // Distance from origin in AU
+    distance: 12.0,       // Distance from origin in AU
     minDistance: 1.0,
     maxDistance: 150.0,
     // Vertical orbit limits expressed as +/- degrees above/below the ecliptic.
@@ -557,6 +557,13 @@ astorb.camera = {
     lastMouseX: 0,
     lastMouseY: 0
 };
+
+astorb.epoch = {
+    planetEpochMs: Date.UTC(2000, 0, 1, 12, 0, 0),
+    asteroidEpochMs: Date.UTC(2013, 9, 15, 12, 0, 0)
+};
+
+astorb.planetEpochOffsetSec = (astorb.epoch.asteroidEpochMs - astorb.epoch.planetEpochMs) / 1000.0;
 
 // Time control
 astorb.time = {
@@ -682,9 +689,9 @@ astorb.constants = {
     muSun: 3.96401599E-14
 };
 
-astorb.bodyScale = 200000.0;
+astorb.bodyScale = 320000.0;
 astorb.radiusScale = {
-    km: 4000.0
+    km: 6000.0
 };
 
 astorb.bodies = [
@@ -770,6 +777,7 @@ astorb.getScaledRadiusAu = function(radiusKm)
 
 astorb.computeKeplerPosition = function(orbit, timeSec)
 {
+    var adjustedTimeSec = timeSec + astorb.planetEpochOffsetSec;
     var deg2rad = Math.PI / 180.0;
     var a = orbit.a;
     var e = orbit.e;
@@ -780,7 +788,7 @@ astorb.computeKeplerPosition = function(orbit, timeSec)
     var muSun = astorb.constants.muSun;
 
     var n = Math.sqrt(muSun / Math.pow(a, 3.0));
-    var M = (n * timeSec + M0) % (2.0 * Math.PI);
+    var M = (n * adjustedTimeSec + M0) % (2.0 * Math.PI);
 
     var E = M;
     for (var iteration = 0; iteration < 30; iteration++)
