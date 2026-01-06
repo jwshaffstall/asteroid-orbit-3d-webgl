@@ -548,7 +548,7 @@ astorb.camera = {
     // elevation: angle above/below the ecliptic plane. 0 = in plane, +80° = above, -80° = below.
     azimuth: 0.0,
     elevation: 20.0 * Math.PI / 180.0,  // Start slightly above the ecliptic plane
-    distance: 8.0,       // Distance from origin in AU
+    distance: 12.0,       // Distance from origin in AU
     minDistance: 1.0,
     maxDistance: 150.0,
     // Vertical orbit limits expressed as +/- degrees above/below the ecliptic.
@@ -557,6 +557,22 @@ astorb.camera = {
     lastMouseX: 0,
     lastMouseY: 0
 };
+
+// Epoch configuration:
+// - planetEpochMs: epoch (J2000.0) used for planetary orbital elements, expressed as UTC milliseconds.
+// - asteroidEpochMs: epoch of the asteroid orbital elements catalog (October 15, 2013, 12:00 UTC).
+// These values are used so that planetary positions (computed from J2000.0 elements) can be
+// shifted to the asteroid elements epoch, ensuring all bodies start the simulation at the same
+// reference time.
+astorb.epoch = {
+    planetEpochMs: Date.UTC(2000, 0, 1, 12, 0, 0),
+    asteroidEpochMs: Date.UTC(2013, 9, 15, 12, 0, 0)
+};
+
+// Time offset (in seconds) between the planetary J2000.0 epoch and the asteroid elements epoch.
+// This is applied when computing planetary positions so they are aligned with the asteroid epoch
+// when the simulation starts.
+astorb.planetEpochOffsetSec = (astorb.epoch.asteroidEpochMs - astorb.epoch.planetEpochMs) / 1000.0;
 
 // Time control
 astorb.time = {
@@ -682,9 +698,9 @@ astorb.constants = {
     muSun: 3.96401599E-14
 };
 
-astorb.bodyScale = 200000.0;
+astorb.bodyScale = 320000.0;
 astorb.radiusScale = {
-    km: 4000.0
+    km: 6000.0
 };
 
 astorb.bodies = [
@@ -770,6 +786,9 @@ astorb.getScaledRadiusAu = function(radiusKm)
 
 astorb.computeKeplerPosition = function(orbit, timeSec)
 {
+    // Adjust time so planet positions (using J2000.0 orbital elements) align with the asteroid epoch (2013-10-15),
+    // ensuring all bodies are computed for the same reference time.
+    var adjustedTimeSec = timeSec + astorb.planetEpochOffsetSec;
     var deg2rad = Math.PI / 180.0;
     var a = orbit.a;
     var e = orbit.e;
@@ -780,7 +799,7 @@ astorb.computeKeplerPosition = function(orbit, timeSec)
     var muSun = astorb.constants.muSun;
 
     var n = Math.sqrt(muSun / Math.pow(a, 3.0));
-    var M = (n * timeSec + M0) % (2.0 * Math.PI);
+    var M = (n * adjustedTimeSec + M0) % (2.0 * Math.PI);
 
     var E = M;
     for (var iteration = 0; iteration < 30; iteration++)
