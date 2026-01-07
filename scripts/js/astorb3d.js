@@ -649,6 +649,7 @@ astorb.initBuffers = function(gl)
 
     // Initialize planet orbit paths
     astorb.initPlanetOrbits(gl);
+    astorb.initDwarfPlanetOrbits(gl);
     astorb.initBodies(gl);
 
     // Update the view matrix initially
@@ -693,6 +694,14 @@ astorb.planetOrbits = [
     {name: "Neptune", a: 30.06992276, e: 0.00859048, i: 1.77004347, w: 273.187, O: 131.78422574, M: 256.228}
 ];
 
+astorb.dwarfPlanetOrbits = [
+    {name: "Ceres", a: 2.7675, e: 0.0758, i: 10.594, w: 73.5977, O: 80.3055, M: 95.989},
+    {name: "Pluto", a: 39.482, e: 0.2488, i: 17.14, w: 113.763, O: 110.299, M: 14.53},
+    {name: "Haumea", a: 43.218, e: 0.191, i: 28.19, w: 240.6, O: 121.9, M: 205.1},
+    {name: "Makemake", a: 45.436, e: 0.161, i: 28.98, w: 294.8, O: 79.6, M: 92.3},
+    {name: "Eris", a: 67.781, e: 0.44, i: 44.04, w: 151.6, O: 35.95, M: 204.4}
+];
+
 astorb.constants = {
     auKm: 149597870.7,
     muSun: 3.96401599E-14
@@ -716,6 +725,14 @@ astorb.planetBodies = [
     {name: "Saturn", radiusKm: 58232, color: [0.9, 0.8, 0.5]},
     {name: "Uranus", radiusKm: 25362, color: [0.6, 0.8, 0.9]},
     {name: "Neptune", radiusKm: 24622, color: [0.3, 0.5, 0.9]}
+];
+
+astorb.dwarfPlanetBodies = [
+    {name: "Ceres", radiusKm: 473, color: [0.75, 0.7, 0.65], sizeScale: 0.6},
+    {name: "Pluto", radiusKm: 1188.3, color: [0.85, 0.75, 0.65], sizeScale: 0.6},
+    {name: "Haumea", radiusKm: 816, color: [0.85, 0.9, 0.95], sizeScale: 0.6},
+    {name: "Makemake", radiusKm: 715, color: [0.9, 0.6, 0.35], sizeScale: 0.6},
+    {name: "Eris", radiusKm: 1163, color: [0.8, 0.85, 0.95], sizeScale: 0.6}
 ];
 
 astorb.moonBodies = [
@@ -765,9 +782,51 @@ astorb.initPlanetOrbits = function(gl)
     astorb.planetOrbitSegments = segments;
 };
 
+astorb.initDwarfPlanetOrbits = function(gl)
+{
+    var segments = 360;
+    var dashOn = 7;
+    var dashOff = 5;
+    var floatsPerVertex = 6;
+    var orbitData = [];
+    var offsets = [];
+
+    var dashLength = dashOn + dashOff;
+    for (var orbitIndex = 0; orbitIndex < astorb.dwarfPlanetOrbits.length; orbitIndex++)
+    {
+        var orbit = astorb.dwarfPlanetOrbits[orbitIndex];
+        var start = orbitData.length / floatsPerVertex;
+        var count = 0;
+
+        for (var segmentIndex = 0; segmentIndex < segments; segmentIndex++)
+        {
+            if ((segmentIndex % dashLength) >= dashOn)
+            {
+                continue;
+            }
+            var meanAnomaly = 360.0 * (segmentIndex / segments);
+            var nextMeanAnomaly = 360.0 * ((segmentIndex + 1) / segments);
+
+            orbitData.push(meanAnomaly, orbit.w, orbit.O, orbit.i, orbit.e, orbit.a);
+            orbitData.push(nextMeanAnomaly, orbit.w, orbit.O, orbit.i, orbit.e, orbit.a);
+            count += 2;
+        }
+
+        offsets.push({name: orbit.name, start: start, count: count});
+    }
+
+    var orbitBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, orbitBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(orbitData), gl.STATIC_DRAW);
+
+    astorb.dwarfPlanetOrbitBuffer = orbitBuffer;
+    astorb.dwarfPlanetOrbitOffsets = offsets;
+    astorb.dwarfPlanetOrbitSegments = segments;
+};
+
 astorb.initBodies = function(gl)
 {
-    var bodyList = astorb.bodies.concat(astorb.planetBodies, astorb.moonBodies);
+    var bodyList = astorb.bodies.concat(astorb.planetBodies, astorb.dwarfPlanetBodies, astorb.moonBodies);
     astorb.bodyList = bodyList;
     astorb.bodyCount = bodyList.length;
 
@@ -777,11 +836,12 @@ astorb.initBodies = function(gl)
     astorb.bodyBuffer = bodyBuffer;
 };
 
-astorb.getScaledRadiusAu = function(radiusKm)
+astorb.getScaledRadiusAu = function(radiusKm, sizeScale)
 {
     var logRadius = Math.log(radiusKm) / Math.LN10;
     var scaledKm = logRadius * astorb.radiusScale.km;
-    return scaledKm / astorb.constants.auKm;
+    var scale = sizeScale === undefined ? 1.0 : sizeScale;
+    return (scaledKm * scale) / astorb.constants.auKm;
 };
 
 astorb.computeKeplerPosition = function(orbit, timeSec)
@@ -867,10 +927,26 @@ astorb.updateBodies = function(timeSec)
         bodyData[cursor++] = position[0];
         bodyData[cursor++] = position[1];
         bodyData[cursor++] = position[2];
-        bodyData[cursor++] = astorb.getScaledRadiusAu(planet.radiusKm);
+        bodyData[cursor++] = astorb.getScaledRadiusAu(planet.radiusKm, planet.sizeScale);
         bodyData[cursor++] = planet.color[0];
         bodyData[cursor++] = planet.color[1];
         bodyData[cursor++] = planet.color[2];
+    }
+
+    for (var dwarfIndex = 0; dwarfIndex < astorb.dwarfPlanetBodies.length; dwarfIndex++)
+    {
+        var dwarf = astorb.dwarfPlanetBodies[dwarfIndex];
+        var dwarfOrbit = astorb.dwarfPlanetOrbits[dwarfIndex];
+        var dwarfPosition = astorb.computeKeplerPosition(dwarfOrbit, timeSec);
+        positions[dwarf.name] = dwarfPosition;
+
+        bodyData[cursor++] = dwarfPosition[0];
+        bodyData[cursor++] = dwarfPosition[1];
+        bodyData[cursor++] = dwarfPosition[2];
+        bodyData[cursor++] = astorb.getScaledRadiusAu(dwarf.radiusKm, dwarf.sizeScale);
+        bodyData[cursor++] = dwarf.color[0];
+        bodyData[cursor++] = dwarf.color[1];
+        bodyData[cursor++] = dwarf.color[2];
     }
 
     for (var moonIndex = 0; moonIndex < astorb.moonBodies.length; moonIndex++)
@@ -1485,6 +1561,24 @@ astorb.animate = function(timestamp)
         {
             var orbit = astorb.planetOrbitOffsets[orbitIndex];
             gl.drawArrays(gl.LINE_STRIP, orbit.start, orbit.count);
+        }
+    }
+
+    if (astorb.dwarfPlanetOrbitBuffer)
+    {
+        gl.useProgram(astorb.asteroidProgram);
+        gl.bindBuffer(gl.ARRAY_BUFFER, astorb.dwarfPlanetOrbitBuffer);
+        astorb.configureAttributePointers(gl);
+        gl.uniform1f(astorb.timeUniform, 0);
+        if (astorb.opacityUniform !== null)
+        {
+            gl.uniform1f(astorb.opacityUniform, 0.7);
+        }
+
+        for (var dwarfOrbitIndex = 0; dwarfOrbitIndex < astorb.dwarfPlanetOrbitOffsets.length; dwarfOrbitIndex++)
+        {
+            var dwarfOrbit = astorb.dwarfPlanetOrbitOffsets[dwarfOrbitIndex];
+            gl.drawArrays(gl.LINES, dwarfOrbit.start, dwarfOrbit.count);
         }
     }
 
