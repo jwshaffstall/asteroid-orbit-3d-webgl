@@ -813,6 +813,7 @@ astorb.initDwarfPlanetOrbits = function(gl)
         }
 
         offsets.push({name: orbit.name, start: start, count: count});
+        astorb.log("Dwarf planet orbit " + orbit.name + ": start=" + start + " count=" + count + " a=" + orbit.a + " AU", "cyan");
     }
 
     var orbitBuffer = gl.createBuffer();
@@ -822,6 +823,7 @@ astorb.initDwarfPlanetOrbits = function(gl)
     astorb.dwarfPlanetOrbitBuffer = orbitBuffer;
     astorb.dwarfPlanetOrbitOffsets = offsets;
     astorb.dwarfPlanetOrbitSegments = segments;
+    astorb.log("Dwarf planet orbits initialized: " + offsets.length + " orbits, " + (orbitData.length / floatsPerVertex) + " vertices", "green");
 };
 
 astorb.initBodies = function(gl)
@@ -1575,9 +1577,18 @@ astorb.animate = function(timestamp)
             gl.uniform1f(astorb.opacityUniform, 0.7);
         }
 
+        if (astorb.frameCount === 1)
+        {
+            astorb.log("Rendering dwarf planet orbits: " + astorb.dwarfPlanetOrbitOffsets.length + " orbits", "magenta");
+        }
+
         for (var dwarfOrbitIndex = 0; dwarfOrbitIndex < astorb.dwarfPlanetOrbitOffsets.length; dwarfOrbitIndex++)
         {
             var dwarfOrbit = astorb.dwarfPlanetOrbitOffsets[dwarfOrbitIndex];
+            if (astorb.frameCount === 1)
+            {
+                astorb.log("  Drawing " + dwarfOrbit.name + ": start=" + dwarfOrbit.start + " count=" + dwarfOrbit.count, "magenta");
+            }
             gl.drawArrays(gl.LINES, dwarfOrbit.start, dwarfOrbit.count);
         }
     }
