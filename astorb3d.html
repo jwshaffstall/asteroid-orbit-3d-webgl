@@ -69,6 +69,29 @@
             flex: 1 1 auto;
             min-height: 0;
         }
+        #labelLayer
+        {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 1;
+            font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .orbit-label
+        {
+            position: absolute;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.65);
+            padding: 2px 6px;
+            border-radius: 8px;
+            white-space: nowrap;
+            letter-spacing: 0.04em;
+            transform: translate(-50%, -50%);
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+        }
         #loadingOverlay
         {
             position: absolute;
@@ -210,6 +233,7 @@
     <canvas id="astorb3dCanvas" tabindex="0">
         Your browser doesn't appear to support the HTML5 <code>&lt;canvas&gt;</code> element.
     </canvas>
+    <div id="labelLayer" aria-hidden="true"></div>
     <div id="loadingOverlay">
         <svg id="loadingProgress" viewBox="0 0 120 120" aria-label="Loading progress">
             <circle class="track" cx="60" cy="60" r="52"></circle>

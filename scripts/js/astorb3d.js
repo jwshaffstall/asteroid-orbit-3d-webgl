@@ -193,6 +193,7 @@ astorb.updateProjectionMatrix = function()
     var nearPlaneAU = 0.005;
     var farPlaneAU = 300.0;
     mat4.perspective(perspectiveMatrix, cameraFieldOfViewRadians, aspectRatio, nearPlaneAU, farPlaneAU);
+    astorb.projectionMatrix = perspectiveMatrix;
 
     gl.useProgram(astorb.asteroidProgram);
     gl.uniformMatrix4fv(astorb.pUniform, false, perspectiveMatrix);
@@ -297,6 +298,7 @@ astorb.initWebGL = function(gl, canvas)
         astorb.initShaders(gl);
         astorb.initBodyShaders(gl);
         astorb.initBuffers(gl);
+        astorb.initOrbitLabels();
 
         success = true;
     }
@@ -607,6 +609,7 @@ astorb.initBuffers = function(gl)
     var farPlaneAU = 300.0;
     astorb.farPlaneAU = farPlaneAU;
     mat4.perspective(perspectiveMatrix, cameraFieldOfViewRadians, aspectRatio, nearPlaneAU, farPlaneAU);
+    astorb.projectionMatrix = perspectiveMatrix;
 
     gl.useProgram(astorb.asteroidProgram);
     var shaderProgram = astorb.asteroidProgram;
@@ -872,6 +875,145 @@ astorb.computeKeplerPosition = function(orbit, timeSec)
     var z = r * (Math.sin(i) * Math.sin(theta));
 
     return [x, y, z];
+};
+
+astorb.computeOrbitPoint = function(orbit, meanAnomalyDeg)
+{
+    var deg2rad = Math.PI / 180.0;
+    var a = orbit.a;
+    var e = orbit.e;
+    var i = orbit.i * deg2rad;
+    var omega = orbit.w * deg2rad;
+    var sigma = orbit.O * deg2rad;
+    var M = meanAnomalyDeg * deg2rad;
+
+    var E = M;
+    for (var iteration = 0; iteration < 30; iteration++)
+    {
+        E = E - (E - e * Math.sin(E) - M) / (1.0 - e * Math.cos(E));
+    }
+    var r = a * (1.0 - e * Math.cos(E));
+    var nu = 2.0 * Math.atan2(Math.sqrt(1.0 + e) * Math.sin(E / 2.0),
+        Math.sqrt(1.0 - e) * Math.cos(E / 2.0));
+
+    var theta = omega + nu;
+
+    var x = r * (Math.cos(sigma) * Math.cos(theta) - Math.sin(sigma) * Math.sin(theta) * Math.cos(i));
+    var y = r * (Math.sin(sigma) * Math.cos(theta) + Math.cos(sigma) * Math.sin(theta) * Math.cos(i));
+    var z = r * (Math.sin(i) * Math.sin(theta));
+
+    return [x, y, z];
+};
+
+astorb.initOrbitLabels = function()
+{
+    var labelLayer = document.getElementById("labelLayer");
+    if (!labelLayer)
+    {
+        return;
+    }
+
+    astorb.labelLayer = labelLayer;
+    labelLayer.innerHTML = "";
+
+    var labels = [];
+    var addLabel = function(name, orbit, segments)
+    {
+        var label = document.createElement("div");
+        label.className = "orbit-label";
+        label.textContent = name;
+        labelLayer.appendChild(label);
+        labels.push({
+            name: name,
+            orbit: orbit,
+            segments: segments,
+            element: label
+        });
+    };
+
+    for (var planetIndex = 0; planetIndex < astorb.planetOrbits.length; planetIndex++)
+    {
+        addLabel(astorb.planetOrbits[planetIndex].name, astorb.planetOrbits[planetIndex], astorb.planetOrbitSegments || 240);
+    }
+
+    for (var dwarfIndex = 0; dwarfIndex < astorb.dwarfPlanetOrbits.length; dwarfIndex++)
+    {
+        addLabel(astorb.dwarfPlanetOrbits[dwarfIndex].name, astorb.dwarfPlanetOrbits[dwarfIndex], astorb.dwarfPlanetOrbitSegments || 480);
+    }
+
+    astorb.orbitLabels = labels;
+};
+
+astorb.updateOrbitLabels = function()
+{
+    if (!astorb.orbitLabels || !astorb.projectionMatrix || !astorb.mvMatrix || !astorb.canvas)
+    {
+        return;
+    }
+
+    var cameraPosition = astorb.cameraWorldPosition || [0, 0, 0];
+    var viewProjection = mat4.create();
+    mat4.multiply(viewProjection, astorb.projectionMatrix, astorb.mvMatrix);
+
+    var rect = astorb.canvas.getBoundingClientRect();
+    var width = rect.width;
+    var height = rect.height;
+
+    for (var labelIndex = 0; labelIndex < astorb.orbitLabels.length; labelIndex++)
+    {
+        var labelInfo = astorb.orbitLabels[labelIndex];
+        var orbit = labelInfo.orbit;
+        var segments = labelInfo.segments || 240;
+        var minDistance = Infinity;
+        var closestPoint = null;
+
+        for (var segmentIndex = 0; segmentIndex <= segments; segmentIndex++)
+        {
+            var meanAnomaly = 360.0 * (segmentIndex / segments);
+            var point = astorb.computeOrbitPoint(orbit, meanAnomaly);
+            var dx = point[0] - cameraPosition[0];
+            var dy = point[1] - cameraPosition[1];
+            var dz = point[2] - cameraPosition[2];
+            var distance = dx * dx + dy * dy + dz * dz;
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+                closestPoint = point;
+            }
+        }
+
+        if (!closestPoint)
+        {
+            labelInfo.element.style.display = "none";
+            continue;
+        }
+
+        var clip = vec4.fromValues(closestPoint[0], closestPoint[1], closestPoint[2], 1.0);
+        vec4.transformMat4(clip, clip, viewProjection);
+        if (clip[3] <= 0.0)
+        {
+            labelInfo.element.style.display = "none";
+            continue;
+        }
+
+        var ndcX = clip[0] / clip[3];
+        var ndcY = clip[1] / clip[3];
+        var ndcZ = clip[2] / clip[3];
+
+        if (ndcZ < -1 || ndcZ > 1)
+        {
+            labelInfo.element.style.display = "none";
+            continue;
+        }
+
+        var screenX = (ndcX * 0.5 + 0.5) * width;
+        var screenY = (1 - (ndcY * 0.5 + 0.5)) * height;
+
+        var element = labelInfo.element;
+        element.style.display = "block";
+        element.style.left = screenX + "px";
+        element.style.top = screenY + "px";
+    }
 };
 
 astorb.computeMoonPosition = function(moon, parentPosition, timeSec)
@@ -1468,6 +1610,9 @@ astorb.updateViewMatrix = function()
     mvMatrix[14] = vec3.dot(f, eye);
     mvMatrix[15] = 1;
 
+    astorb.cameraWorldPosition = [eye[0], eye[1], eye[2]];
+    astorb.mvMatrix = mvMatrix;
+
     gl.useProgram(astorb.asteroidProgram);
     gl.uniformMatrix4fv(astorb.mvUniform, false, mvMatrix);
 
@@ -1639,6 +1784,8 @@ astorb.animate = function(timestamp)
     {
         stats.end();
     }
+
+    astorb.updateOrbitLabels();
 
     requestAnimationFrame(astorb.animate);
 };
