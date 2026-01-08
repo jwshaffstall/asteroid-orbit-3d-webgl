@@ -229,6 +229,7 @@ astorb.log("by John W. Shaffstall", "black");
 
 astorb.canvasId = "astorb3dCanvas";
 astorb.depthBufferEnabled = true;
+astorb.showOrbitLabels = false;
 astorb.onLoadBody = function()
 {
     var canvas = document.getElementById(astorb.canvasId);
@@ -264,6 +265,7 @@ astorb.onLoadBody = function()
                 astorb.setupDepthBufferControls();
                 astorb.setupMotionBlurControls();
                 astorb.setupRenderColorControls();
+                astorb.setupOrbitLabelControls();
                 astorb.initStats();
                 astorb.loadAstorbData();
             }
@@ -942,10 +944,16 @@ astorb.initOrbitLabels = function()
     }
 
     astorb.orbitLabels = labels;
+    labelLayer.style.display = astorb.showOrbitLabels ? "block" : "none";
 };
 
 astorb.updateOrbitLabels = function()
 {
+    if (!astorb.showOrbitLabels)
+    {
+        return;
+    }
+
     if (!astorb.orbitLabels || !astorb.projectionMatrix || !astorb.mvMatrix || !astorb.canvas)
     {
         return;
@@ -1423,6 +1431,25 @@ astorb.setupRenderColorControls = function()
     astorb.refreshRenderColorControls();
 };
 
+astorb.setupOrbitLabelControls = function()
+{
+    var labelButton = document.getElementById('orbitLabelButton');
+
+    if (labelButton)
+    {
+        labelButton.addEventListener('click', function() {
+            astorb.showOrbitLabels = !astorb.showOrbitLabels;
+            if (typeof astorb.log === 'function')
+            {
+                astorb.log("Orbit labels " + (astorb.showOrbitLabels ? "enabled" : "disabled"), "blue");
+            }
+            astorb.refreshOrbitLabelControls();
+        });
+    }
+
+    astorb.refreshOrbitLabelControls();
+};
+
 astorb.stats = null;
 astorb.initStats = function()
 {
@@ -1524,6 +1551,30 @@ astorb.refreshRenderColorControls = function()
     {
         var mode = astorb.colorModes[astorb.colorModeIndex] || astorb.colorModes[0];
         renderButton.textContent = mode.label;
+    }
+};
+
+astorb.refreshOrbitLabelControls = function()
+{
+    var labelButton = document.getElementById('orbitLabelButton');
+    var labelLayer = astorb.labelLayer;
+
+    if (labelButton)
+    {
+        labelButton.textContent = "Labels: " + (astorb.showOrbitLabels ? "On" : "Off");
+    }
+
+    if (labelLayer)
+    {
+        labelLayer.style.display = astorb.showOrbitLabels ? "block" : "none";
+    }
+
+    if (!astorb.showOrbitLabels && astorb.orbitLabels)
+    {
+        for (var labelIndex = 0; labelIndex < astorb.orbitLabels.length; labelIndex++)
+        {
+            astorb.orbitLabels[labelIndex].element.style.display = "none";
+        }
     }
 };
 
