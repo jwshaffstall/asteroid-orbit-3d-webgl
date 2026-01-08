@@ -1439,6 +1439,10 @@ astorb.setupOrbitLabelControls = function()
     {
         labelButton.addEventListener('click', function() {
             astorb.showOrbitLabels = !astorb.showOrbitLabels;
+            if (typeof astorb.log === 'function')
+            {
+                astorb.log("Orbit labels " + (astorb.showOrbitLabels ? "enabled" : "disabled"), "blue");
+            }
             astorb.refreshOrbitLabelControls();
         });
     }
