@@ -784,40 +784,35 @@ astorb.initPlanetOrbits = function(gl)
 
 astorb.initDwarfPlanetOrbits = function(gl)
 {
-    var segments = 360;
-    var dashOn = 7;
-    var dashOff = 5;
+    var segments = 480;
     var floatsPerVertex = 6;
-    var orbitData = [];
+    var dwarfCount = astorb.dwarfPlanetOrbits.length;
+    var verticesPerOrbit = segments + 1;
+    var totalVertices = dwarfCount * verticesPerOrbit;
+    var orbitData = new Float32Array(totalVertices * floatsPerVertex);
     var offsets = [];
+    var cursor = 0;
 
-    var dashLength = dashOn + dashOff;
-    for (var orbitIndex = 0; orbitIndex < astorb.dwarfPlanetOrbits.length; orbitIndex++)
+    for (var orbitIndex = 0; orbitIndex < dwarfCount; orbitIndex++)
     {
         var orbit = astorb.dwarfPlanetOrbits[orbitIndex];
-        var start = orbitData.length / floatsPerVertex;
-        var count = 0;
+        offsets.push({name: orbit.name, start: orbitIndex * verticesPerOrbit, count: verticesPerOrbit});
 
-        for (var segmentIndex = 0; segmentIndex < segments; segmentIndex++)
+        for (var segmentIndex = 0; segmentIndex < verticesPerOrbit; segmentIndex++)
         {
-            if ((segmentIndex % dashLength) >= dashOn)
-            {
-                continue;
-            }
             var meanAnomaly = 360.0 * (segmentIndex / segments);
-            var nextMeanAnomaly = 360.0 * ((segmentIndex + 1) / segments);
-
-            orbitData.push(meanAnomaly, orbit.w, orbit.O, orbit.i, orbit.e, orbit.a);
-            orbitData.push(nextMeanAnomaly, orbit.w, orbit.O, orbit.i, orbit.e, orbit.a);
-            count += 2;
+            orbitData[cursor++] = meanAnomaly;
+            orbitData[cursor++] = orbit.w;
+            orbitData[cursor++] = orbit.O;
+            orbitData[cursor++] = orbit.i;
+            orbitData[cursor++] = orbit.e;
+            orbitData[cursor++] = orbit.a;
         }
-
-        offsets.push({name: orbit.name, start: start, count: count});
     }
 
     var orbitBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, orbitBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(orbitData), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, orbitData, gl.STATIC_DRAW);
 
     astorb.dwarfPlanetOrbitBuffer = orbitBuffer;
     astorb.dwarfPlanetOrbitOffsets = offsets;
@@ -1572,13 +1567,13 @@ astorb.animate = function(timestamp)
         gl.uniform1f(astorb.timeUniform, 0);
         if (astorb.opacityUniform !== null)
         {
-            gl.uniform1f(astorb.opacityUniform, 0.7);
+            gl.uniform1f(astorb.opacityUniform, 0.9);
         }
 
         for (var dwarfOrbitIndex = 0; dwarfOrbitIndex < astorb.dwarfPlanetOrbitOffsets.length; dwarfOrbitIndex++)
         {
             var dwarfOrbit = astorb.dwarfPlanetOrbitOffsets[dwarfOrbitIndex];
-            gl.drawArrays(gl.LINES, dwarfOrbit.start, dwarfOrbit.count);
+            gl.drawArrays(gl.LINE_STRIP, dwarfOrbit.start, dwarfOrbit.count);
         }
     }
 
