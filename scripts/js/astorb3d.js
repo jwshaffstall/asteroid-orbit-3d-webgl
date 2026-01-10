@@ -588,10 +588,10 @@ astorb.time = {
 
 astorb.motionBlur = {
     enabled: false,
-    sampleCount: 5,
-    spanMultiplier: 6,
+    sampleCount: 3,
+    spanMultiplier: 12,
     maxSpanSeconds: 24 * 60 * 60,
-    opacity: 0.4
+    opacity: 0.6
 };
 
 astorb.dataLoaded = false;
@@ -1814,7 +1814,7 @@ astorb.animate = function(timestamp)
         var sampleBlend = blurSamples > 1 ? (sampleIndex / (blurSamples - 1)) : 0;
         var sampleTime = time.simTime - (blurSpan * sampleBlend);
         var weight = blurActive ? (1.0 - sampleBlend) : 1.0;
-        var opacity = blurActive ? (motionBlur.opacity * weight * weight) : 1.0;
+        var opacity = blurActive ? (motionBlur.opacity * weight) : 1.0;
 
         gl.uniform1f(astorb.timeUniform, sampleTime);
         if (astorb.opacityUniform !== null)
