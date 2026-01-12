@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asteroid Orbit 3D | Launch</title>
+    <style>
+        :root
+        {
+            color-scheme: dark;
+            --bg: #0b0f1a;
+            --panel: rgba(18, 24, 38, 0.92);
+            --panel-border: rgba(148, 163, 184, 0.2);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent: #38bdf8;
+            --accent-strong: #22d3ee;
+        }
+
+        html, body
+        {
+            height: 100%;
+            margin: 0;
+        }
+
+        body
+        {
+            font-family: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+            background: radial-gradient(circle at top left, #1e293b 0%, #0b0f1a 55%, #030712 100%);
+            color: var(--text-primary);
+            display: grid;
+            place-items: center;
+            padding: 24px;
+        }
+
+        .card
+        {
+            max-width: 520px;
+            padding: 28px;
+            border-radius: 18px;
+            background: var(--panel);
+            border: 1px solid var(--panel-border);
+            box-shadow: 0 20px 45px rgba(2, 6, 23, 0.45);
+            text-align: center;
+        }
+
+        .eyebrow
+        {
+            text-transform: uppercase;
+            letter-spacing: 0.3em;
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin: 0 0 8px 0;
+        }
+
+        h1
+        {
+            margin: 0 0 12px 0;
+            font-size: 28px;
+            letter-spacing: 0.02em;
+        }
+
+        p
+        {
+            margin: 0 0 20px 0;
+            color: var(--text-secondary);
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        .launch-button
+        {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 12px 20px;
+            border-radius: 999px;
+            border: 1px solid rgba(56, 189, 248, 0.6);
+            background: rgba(30, 41, 59, 0.9);
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 13px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .launch-button:hover
+        {
+            border-color: var(--accent-strong);
+            transform: translateY(-2px);
+        }
+
+        .meta
+        {
+            margin-top: 18px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .meta a
+        {
+            color: var(--accent);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <main class="card">
+        <p class="eyebrow">Asteroid Orbital Elements Database</p>
+        <h1>Asteroid Orbit 3D</h1>
+        <p>
+            A real-time WebGL visualization of the astorb catalog. Dive into orbital patterns, tune the
+            simulation speed, and surface resonances with a single click.
+        </p>
+        <a class="launch-button" href="/astorb3d.html">Launch the Experience →</a>
+        <div class="meta">
+            Tip: Run <strong>npm run dev</strong> to preview locally, or <a href="/astorb3d.html">open the visualization directly</a>.
+        </div>
+    </main>
+</body>
+</html>
