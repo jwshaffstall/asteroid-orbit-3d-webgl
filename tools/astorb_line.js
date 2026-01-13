@@ -23,21 +23,20 @@ function parse_line(line)
         // Eccentricity = ([158, 168], "", "")
         // SemimajorAxis = ([169, 181], "AU", "")
 
-        var meanAnomaly = parseFloat(line.substr(115, 125-115));
-        var argumentOfPerihelion = parseFloat(line.substr(126, 136-126));
-        var longitudeOfAscendingNode = parseFloat(line.substr(137, 147-137));
-        var inclination = parseFloat(line.substr(148, 157-148));
-        var eccentricity = parseFloat(line.substr(158, 168-158));
-        var semimajorAxis = parseFloat(line.substr(169, 181-169));
+        var meanAnomaly = parseFloat(line.substr(115, 125 - 115));
+        var argumentOfPerihelion = parseFloat(line.substr(126, 136 - 126));
+        var longitudeOfAscendingNode = parseFloat(line.substr(137, 147 - 137));
+        var inclination = parseFloat(line.substr(148, 157 - 148));
+        var eccentricity = parseFloat(line.substr(158, 168 - 158));
+        var semimajorAxis = parseFloat(line.substr(169, 181 - 169));
 
-        asteroid =
-        {
-            meanAnomaly : meanAnomaly,
-            argumentOfPerihelion : argumentOfPerihelion,
-            longitudeOfAscendingNode : longitudeOfAscendingNode,
-            inclination : inclination,
-            eccentricity : eccentricity,
-            semimajorAxis : semimajorAxis
+        asteroid = {
+            meanAnomaly: meanAnomaly,
+            argumentOfPerihelion: argumentOfPerihelion,
+            longitudeOfAscendingNode: longitudeOfAscendingNode,
+            inclination: inclination,
+            eccentricity: eccentricity,
+            semimajorAxis: semimajorAxis,
         };
     }
 

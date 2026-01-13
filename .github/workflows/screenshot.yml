@@ -1,42 +1,42 @@
 name: Capture WebGL Screenshot
 
 on:
-  workflow_dispatch:
-  pull_request:
+    workflow_dispatch:
+    pull_request:
 
 jobs:
-  capture:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-        # os: [ubuntu-latest, windows-latest, macos-latest]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    capture:
+        runs-on: ${{ matrix.os }}
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ubuntu-latest]
+                # os: [ubuntu-latest, windows-latest, macos-latest]
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 20
 
-      - name: Install dependencies
-        run: npm install
+            - name: Install dependencies
+              run: npm install
 
-      - name: Install Playwright browsers (Linux)
-        if: runner.os == 'Linux'
-        run: npx playwright install --with-deps
+            - name: Install Playwright browsers (Linux)
+              if: runner.os == 'Linux'
+              run: npx playwright install --with-deps
 
-      # - name: Install Playwright browsers (macOS/Windows)
-      #   if: runner.os != 'Linux'
-      #   run: npx playwright install
+            # - name: Install Playwright browsers (macOS/Windows)
+            #   if: runner.os != 'Linux'
+            #   run: npx playwright install
 
-      - name: Capture screenshot
-        run: npm run screenshot -- --output artifacts/astorb3d-${{ runner.os }}.png
+            - name: Capture screenshot
+              run: npm run screenshot -- --output artifacts/astorb3d-${{ runner.os }}.png
 
-      - name: Upload screenshot artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: astorb3d-screenshot-${{ runner.os }}
-          path: artifacts/astorb3d-${{ runner.os }}.png
+            - name: Upload screenshot artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: astorb3d-screenshot-${{ runner.os }}
+                  path: artifacts/astorb3d-${{ runner.os }}.png
