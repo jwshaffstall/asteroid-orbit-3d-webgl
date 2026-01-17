@@ -21,7 +21,7 @@ This is a 3D WebGL visualization project that renders asteroid orbital elements 
 
 ### Naming Conventions
 - **Variables and functions**: camelCase (e.g., `formatNumber`, `updateLoadingOverlay`)
-- **Constants**: UPPER_SNAKE_CASE for mathematical constants (e.g., `standardGravitationalParameterSun`)
+- **Constants**: camelCase for shader constants (e.g., `pi`, `muSun`, `jupiterSemimajorAxis`)
 - **DOM element IDs**: camelCase (e.g., `astorb3dCanvas`, `loadingOverlay`)
 - **File names**: kebab-case for tools (e.g., `astorb2bin.js`, `generate-qr.js`)
 
@@ -57,9 +57,10 @@ var astorb = astorb || {};
 ## WebGL and Graphics Programming
 
 ### GLSL Shader Guidelines
-- Use `precision mediump float` for most shaders (balance of performance and quality)
+- Use `precision mediump float` for most shaders (or `lowp` for less critical calculations)
 - Declare all uniforms and attributes explicitly at the top of shaders
 - Use descriptive names with prefixes: `a` for attributes, `u` for uniforms, `v` for varyings
+- Use inline comments with `//` for explaining values: `const float muSun = 3.96401599E-14; // AU^3/s^2`
 - Include comments for complex mathematical operations (e.g., Kepler's equation iterations)
 - Clamp values to prevent undefined behavior: `clamp(value, min, max)`
 
@@ -73,7 +74,7 @@ var astorb = astorb || {};
 ### Astronomical Calculations
 - Follow established orbital mechanics formulas (Kepler's equations)
 - Use consistent units: Astronomical Units (AU) for distance, radians for angles, seconds for time
-- Document the physical meaning of constants (e.g., `muSun = 3.96401599E-14; // AU^3/s^2`)
+- Document the physical meaning of constants with inline comments (e.g., `const float muSun = 3.96401599E-14; // AU^3/s^2`)
 - Include iterative solvers with defined iteration counts (e.g., 30 iterations for eccentric anomaly)
 - Apply resonance adjustments for specific asteroid groups (Trojans, Hildas)
 
