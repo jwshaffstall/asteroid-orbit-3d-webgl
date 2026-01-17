@@ -5,11 +5,13 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "screenshot": "node tools/capture-screenshot.js"
+    "screenshot": "node tools/capture-screenshot.js",
+    "generate-qr": "node tools/generate-qr.js"
   },
   "private": true,
   "dependencies": {
-    "minimist": "^1.2.8"
+    "minimist": "^1.2.8",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "playwright": "^1.49.1"
