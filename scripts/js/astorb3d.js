@@ -219,7 +219,12 @@ astorb.log = function(message, color)
     var logDiv = astorb.logDiv;
     if (logDiv)
     {
-        var coloredMessage = message.fontcolor(color);
+        var resolvedColor = color;
+        if (astorb.isDarkTheme && color === "black")
+        {
+            resolvedColor = "#e2e8f0";
+        }
+        var coloredMessage = message.fontcolor(resolvedColor);
         logDiv.innerHTML = "" + coloredMessage + "</br>" + logDiv.innerHTML;
     }
 };
@@ -232,6 +237,7 @@ astorb.log("Orbital elements: <a href='https://en.wikipedia.org/wiki/Orbital_ele
 astorb.canvasId = "astorb3dCanvas";
 astorb.depthBufferEnabled = true;
 astorb.showOrbitLabels = false;
+astorb.isDarkTheme = false;
 astorb.onLoadBody = function()
 {
     var canvas = document.getElementById(astorb.canvasId);
@@ -268,6 +274,7 @@ astorb.onLoadBody = function()
                 astorb.setupMotionBlurControls();
                 astorb.setupRenderColorControls();
                 astorb.setupOrbitLabelControls();
+                astorb.setupThemeControls();
                 astorb.initStats();
                 astorb.loadAstorbData();
             }
@@ -1450,6 +1457,51 @@ astorb.setupOrbitLabelControls = function()
     }
 
     astorb.refreshOrbitLabelControls();
+};
+
+astorb.applyTheme = function()
+{
+    var body = document.body;
+    if (!body) return;
+
+    if (astorb.isDarkTheme)
+    {
+        body.classList.add('dark-theme');
+    }
+    else
+    {
+        body.classList.remove('dark-theme');
+    }
+
+    var themeButton = document.getElementById('themeToggleButton');
+    if (themeButton)
+    {
+        themeButton.textContent = "Theme: " + (astorb.isDarkTheme ? "Dark" : "Light");
+    }
+};
+
+astorb.setupThemeControls = function()
+{
+    var themeButton = document.getElementById('themeToggleButton');
+    if (!themeButton) return;
+
+    var storedTheme = localStorage.getItem('astorb-theme');
+    if (storedTheme)
+    {
+        astorb.isDarkTheme = storedTheme === 'dark';
+    }
+    else if (window.matchMedia)
+    {
+        astorb.isDarkTheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+
+    themeButton.addEventListener('click', function() {
+        astorb.isDarkTheme = !astorb.isDarkTheme;
+        astorb.applyTheme();
+        localStorage.setItem('astorb-theme', astorb.isDarkTheme ? 'dark' : 'light');
+    });
+
+    astorb.applyTheme();
 };
 
 astorb.stats = null;

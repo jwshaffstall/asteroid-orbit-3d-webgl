@@ -4,6 +4,40 @@
     <title>astorb 3d</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <style>
+        :root
+        {
+            color-scheme: light;
+            --page-bg: #ffffff;
+            --page-text: #111111;
+            --panel-bg: #f2f2f2;
+            --panel-text: #111111;
+            --button-bg: #222222;
+            --button-text: #ffffff;
+            --button-border: #555555;
+            --status-bg: #333333;
+            --status-text: #00ff00;
+            --log-bg: #e0e0e0;
+            --canvas-bg: #ffe4ec;
+            --label-text: #f1f5f9;
+        }
+
+        body.dark-theme
+        {
+            color-scheme: dark;
+            --page-bg: #0c111a;
+            --page-text: #e2e8f0;
+            --panel-bg: #141b2d;
+            --panel-text: #e2e8f0;
+            --button-bg: #1f2937;
+            --button-text: #f8fafc;
+            --button-border: #3b475a;
+            --status-bg: #0f172a;
+            --status-text: #38f37a;
+            --log-bg: #111827;
+            --canvas-bg: #05070c;
+            --label-text: #f8fafc;
+        }
+
         html, body
         {
             height: 100%;
@@ -14,8 +48,8 @@
         body
         {
             font-family: monospace;
-            background-color: white;
-            color: black;
+            background-color: var(--page-bg);
+            color: var(--page-text);
 
             /* Avoid double-tap zoom while tapping controls. */
             touch-action: manipulation;
@@ -49,7 +83,7 @@
             flex: 1 1 auto;
             min-height: 0;
 
-            background-color: pink;
+            background-color: var(--canvas-bg);
             outline: none;
 
             /* Prevent inline-canvas whitespace affecting layout. */
@@ -84,7 +118,7 @@
         .orbit-label
         {
             position: absolute;
-            color: #fff;
+            color: var(--label-text);
             background: rgba(0, 0, 0, 0.65);
             padding: 2px 6px;
             border-radius: 8px;
@@ -146,8 +180,8 @@
         #statusDisplay
         {
             padding: 5px;
-            background-color: #333;
-            color: #0f0;
+            background-color: var(--status-bg);
+            color: var(--status-text);
             font-size: 12px;
             font-family: monospace;
             flex: 0 0 auto;
@@ -163,15 +197,20 @@
         }
         #controlBar button
         {
-            background-color: #222;
-            color: #fff;
-            border: 1px solid #555;
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            border: 1px solid var(--button-border);
             border-radius: 6px;
             padding: 8px 14px;
             font-size: 14px;
             cursor: pointer;
             min-width: 90px;
             touch-action: manipulation;
+        }
+        #controlBar button:focus-visible
+        {
+            outline: 2px solid #60a5fa;
+            outline-offset: 2px;
         }
         #controlBar button:active
         {
@@ -180,7 +219,7 @@
         #timeScaleLabel
         {
             font-size: 12px;
-            color: #222;
+            color: var(--panel-text);
         }
         @media (max-width: 640px)
         {
@@ -205,13 +244,17 @@
             height: 160px;
             overflow-y: auto;
 
-            background-color: lightgray;
+            background-color: var(--log-bg);
             flex: 0 0 auto;
             min-height: 0;
 
             /* Keep long lines from forcing horizontal growth. */
             white-space: pre-wrap;
             word-break: break-word;
+        }
+        #astorbLog font[color="black"]
+        {
+            color: var(--panel-text);
         }
     </style>
 </head>
@@ -229,6 +272,7 @@
     <button id="motionBlurButton" type="button">Motion Blur: --</button>
     <button id="renderColorButton" type="button">Color: --</button>
     <button id="orbitLabelButton" type="button">Labels: Off</button>
+    <button id="themeToggleButton" type="button">Theme: Light</button>
     <span id="timeScaleLabel">Speed: --</span>
 </div>
 <div id="canvasContainer">
