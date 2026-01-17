@@ -226,8 +226,8 @@ astorb.log = function(message, color)
 
 astorb.log("astorb3d.js", "black");
 astorb.log("by John W. Shaffstall", "black");
-astorb.log("Source data: <a href='https://asteroid.lowell.edu/astorb/'>https://asteroid.lowell.edu/astorb/</a>", "black")
-astorb.log("Orbital elements: <a href='https://en.wikipedia.org/wiki/Orbital_elements'>https://en.wikipedia.org/wiki/Orbital_elements</a>", "black")
+astorb.log("Source data: <a href='https://asteroid.lowell.edu/astorb/'>https://asteroid.lowell.edu/astorb/</a>", "black");
+astorb.log("Orbital elements: <a href='https://en.wikipedia.org/wiki/Orbital_elements'>https://en.wikipedia.org/wiki/Orbital_elements</a>", "black");
 
 astorb.canvasId = "astorb3dCanvas";
 astorb.depthBufferEnabled = true;
