@@ -35,7 +35,7 @@ The runtime loads a binary file (`temp/astorb3d.bin`) containing Float32 orbital
 asteroid in the following order: mean anomaly, argument of perihelion, longitude of ascending
 node, inclination, eccentricity, and semimajor axis. The `scripts/python/astorb.py` helper
 documents the source field layout from the original `astorb.dat` file, while the WebGL app
-streamlines that data into GPU buffers for realtime animation.
+streamlines that data into GPU buffers for real-time animation.
 
 ### Source Data
 
