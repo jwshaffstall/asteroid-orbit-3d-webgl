@@ -5,6 +5,7 @@
 
 (function ()
 {
+    // Shim vendor-prefixed requestAnimationFrame for older browsers.
     var requestAnimationFrame =
         window.requestAnimationFrame ||
         window.mozRequestAnimationFrame ||
@@ -15,6 +16,7 @@
 
 var astorb = astorb || {};
 
+// UI formatting helpers for log output and status HUDs.
 astorb.formatNumber = function (value)
 {
     if (value === null || value === undefined)
@@ -62,6 +64,7 @@ astorb.formatBitsPerSecond = function (bitsPerSecond)
     return value.toFixed(value >= 10 || index === 0 ? 0 : 1) + " " + units[index];
 };
 
+// Wire up the loading overlay progress ring and numeric readouts.
 astorb.initLoadingOverlay = function ()
 {
     var overlay = document.getElementById("loadingOverlay");
@@ -526,6 +529,7 @@ astorb.loadAstorbData = function ()
     );
 };
 
+// Lightweight XHR loader with progress callbacks for the binary data file.
 astorb.Loader = function (path, inputCallback, inputProgressCallback)
 {
     this.path = path || null;
@@ -558,6 +562,7 @@ astorb.Loader = function (path, inputCallback, inputProgressCallback)
     request.send();
 };
 
+// Convert binary orbital elements into GPU buffers and kick off animation.
 astorb.onLoadAstorbData = function (errorCode, response)
 {
     if (errorCode == 200 && response && response instanceof ArrayBuffer)
@@ -741,6 +746,7 @@ astorb.initBuffers = function (gl)
 
 astorb.configureAttributePointers = function (gl)
 {
+    // Each asteroid uses 6 floats: M, w, Ω, i, e, a (matching shader attributes).
     var bytesPerFloat = 4;
     var floatsPerVertex = 6;
     var floatStride = floatsPerVertex * bytesPerFloat;
@@ -1260,6 +1266,7 @@ astorb.computeMoonPosition = function (moon, parentPosition, timeSec)
     return [parentPosition[0] + x, parentPosition[1] + y, parentPosition[2] + z];
 };
 
+// Refresh the per-frame planet/dwarf/moon buffer for the body shader.
 astorb.updateBodies = function (timeSec)
 {
     var gl = astorb.gl;
@@ -1330,6 +1337,7 @@ astorb.updateBodies = function (timeSec)
     gl.bufferData(gl.ARRAY_BUFFER, bodyData, gl.DYNAMIC_DRAW);
 };
 
+// Set up pointer, touch, wheel, and keyboard interactions for the camera.
 astorb.setupCameraControls = function (canvas)
 {
     var camera = astorb.camera;
@@ -2057,6 +2065,7 @@ astorb.updateViewMatrix = function ()
     }
 };
 
+// Main render loop: advance time, update buffers, draw orbits + bodies + asteroids.
 astorb.animate = function (timestamp)
 {
     var gl = astorb.gl;
