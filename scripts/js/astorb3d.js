@@ -238,6 +238,9 @@ astorb.canvasId = "astorb3dCanvas";
 astorb.depthBufferEnabled = true;
 astorb.showOrbitLabels = false;
 astorb.isDarkTheme = false;
+astorb.pointSizes = [1, 2, 3, 4];
+astorb.pointSizeIndex = 1;
+astorb.pointSize = astorb.pointSizes[astorb.pointSizeIndex];
 astorb.onLoadBody = function()
 {
     var canvas = document.getElementById(astorb.canvasId);
@@ -273,6 +276,7 @@ astorb.onLoadBody = function()
                 astorb.setupDepthBufferControls();
                 astorb.setupMotionBlurControls();
                 astorb.setupRenderColorControls();
+                astorb.setupPointSizeControls();
                 astorb.setupOrbitLabelControls();
                 astorb.setupThemeControls();
                 astorb.initStats();
@@ -633,6 +637,7 @@ astorb.initBuffers = function(gl)
     astorb.colorModeUniform = gl.getUniformLocation(shaderProgram, "uColorMode");
     astorb.farPlaneUniform = gl.getUniformLocation(shaderProgram, "uFarPlaneAU");
     astorb.opacityUniform = gl.getUniformLocation(shaderProgram, "uOpacity");
+    astorb.pointSizeUniform = gl.getUniformLocation(shaderProgram, "uPointSize");
 
     if (astorb.colorModeUniform !== null)
     {
@@ -646,6 +651,7 @@ astorb.initBuffers = function(gl)
     {
         gl.uniform1f(astorb.opacityUniform, 1.0);
     }
+    astorb.applyPointSize();
 
     if (astorb.bodyUniforms)
     {
@@ -1440,6 +1446,35 @@ astorb.setupRenderColorControls = function()
     astorb.refreshRenderColorControls();
 };
 
+astorb.applyPointSize = function()
+{
+    var gl = astorb.gl;
+    if (!gl || astorb.pointSizeUniform === null)
+    {
+        return;
+    }
+    gl.useProgram(astorb.asteroidProgram);
+    gl.uniform1f(astorb.pointSizeUniform, astorb.pointSize);
+};
+
+astorb.setupPointSizeControls = function()
+{
+    var pointButton = document.getElementById('pointSizeButton');
+
+    if (pointButton)
+    {
+        pointButton.addEventListener('click', function() {
+            astorb.pointSizeIndex = (astorb.pointSizeIndex + 1) % astorb.pointSizes.length;
+            astorb.pointSize = astorb.pointSizes[astorb.pointSizeIndex];
+            astorb.applyPointSize();
+            astorb.refreshPointSizeControls();
+        });
+    }
+
+    astorb.applyPointSize();
+    astorb.refreshPointSizeControls();
+};
+
 astorb.setupOrbitLabelControls = function()
 {
     var labelButton = document.getElementById('orbitLabelButton');
@@ -1605,6 +1640,16 @@ astorb.refreshRenderColorControls = function()
     {
         var mode = astorb.colorModes[astorb.colorModeIndex] || astorb.colorModes[0];
         renderButton.textContent = mode.label;
+    }
+};
+
+astorb.refreshPointSizeControls = function()
+{
+    var pointButton = document.getElementById('pointSizeButton');
+
+    if (pointButton)
+    {
+        pointButton.textContent = "Point Size: " + astorb.pointSize + "px";
     }
 };
 
