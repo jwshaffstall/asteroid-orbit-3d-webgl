@@ -235,6 +235,7 @@
     </head>
     <body onload="astorb.onLoadBody()">
         <h1>astorb 3d</h1>
+        <!-- Primary interaction controls for time, rendering, and UI toggles. -->
         <div id="controlBar">
             <button id="pauseButton" type="button">Pause</button>
             <button id="slowButton" type="button">Slow Down</button>
@@ -251,12 +252,15 @@
             <button id="themeToggleButton" type="button">Theme: Light</button>
             <span id="timeScaleLabel">Speed: --</span>
         </div>
+        <!-- Canvas is the WebGL surface; overlays hold labels + loading UI. -->
         <div id="canvasContainer">
             <canvas id="astorb3dCanvas" tabindex="0">
                 Your browser doesn't appear to support the HTML5
                 <code>&lt;canvas&gt;</code> element.
             </canvas>
+            <!-- Orbit labels are HTML elements positioned over the WebGL scene. -->
             <div id="labelLayer" aria-hidden="true"></div>
+            <!-- Loading overlay reports transfer progress for astorb3d.bin. -->
             <div id="loadingOverlay">
                 <svg id="loadingProgress" viewBox="0 0 120 120" aria-label="Loading progress">
                     <circle class="track" cx="60" cy="60" r="52"></circle>
@@ -277,6 +281,7 @@
         <script src="scripts/js/libs/gl-matrix-min.js"></script>
         <script src="scripts/js/libs/stats.min.js"></script>
         <script src="scripts/js/astorb3d.js"></script>
+        <!-- GPU shader programs embedded in the page for easy inspection. -->
         <script type="x-shader/x-vertex" id="shader-vs">
             precision mediump float; // or lowp
 
