@@ -3,3 +3,5 @@ temp
 package-lock.json
 astorb/*.txt
 scripts/js/libs/
+# package.json
+package-lock.json
