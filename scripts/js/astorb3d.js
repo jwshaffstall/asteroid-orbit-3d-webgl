@@ -3,24 +3,28 @@
 // by John W. Shaffstall
 // Tuesday, October 15, 2013
 
-(function() {
-    var requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
-        window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
+(function ()
+{
+    var requestAnimationFrame =
+        window.requestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.msRequestAnimationFrame;
     window.requestAnimationFrame = requestAnimationFrame;
 })();
 
 var astorb = astorb || {};
 
-astorb.formatNumber = function(value)
+astorb.formatNumber = function (value)
 {
     if (value === null || value === undefined)
     {
         return "--";
     }
-    return Number(value).toLocaleString('en-US');
+    return Number(value).toLocaleString("en-US");
 };
 
-astorb.formatAsteroidPercent = function(current, total)
+astorb.formatAsteroidPercent = function (current, total)
 {
     if (!total)
     {
@@ -30,7 +34,7 @@ astorb.formatAsteroidPercent = function(current, total)
     return percent.toFixed(1) + "%";
 };
 
-astorb.formatBytes = function(bytes)
+astorb.formatBytes = function (bytes)
 {
     if (bytes === null || bytes === undefined || isNaN(bytes))
     {
@@ -46,7 +50,7 @@ astorb.formatBytes = function(bytes)
     return value.toFixed(value >= 10 || index === 0 ? 0 : 1) + " " + units[index];
 };
 
-astorb.formatBitsPerSecond = function(bitsPerSecond)
+astorb.formatBitsPerSecond = function (bitsPerSecond)
 {
     if (!bitsPerSecond || !isFinite(bitsPerSecond))
     {
@@ -58,7 +62,7 @@ astorb.formatBitsPerSecond = function(bitsPerSecond)
     return value.toFixed(value >= 10 || index === 0 ? 0 : 1) + " " + units[index];
 };
 
-astorb.initLoadingOverlay = function()
+astorb.initLoadingOverlay = function ()
 {
     var overlay = document.getElementById("loadingOverlay");
     var indicator = document.querySelector("#loadingProgress .indicator");
@@ -79,13 +83,13 @@ astorb.initLoadingOverlay = function()
         percentage: document.getElementById("loadingPercentage"),
         rate: document.getElementById("loadingRate"),
         size: document.getElementById("loadingSize"),
-        downloaded: document.getElementById("loadingDownloaded")
+        downloaded: document.getElementById("loadingDownloaded"),
     };
 
     return astorb.loadingElements;
 };
 
-astorb.showLoadingOverlay = function()
+astorb.showLoadingOverlay = function ()
 {
     var elements = astorb.loadingElements || astorb.initLoadingOverlay();
     if (!elements)
@@ -95,12 +99,12 @@ astorb.showLoadingOverlay = function()
     elements.overlay.classList.remove("hidden");
     astorb.loadingState = {
         startTime: performance.now(),
-        totalBytes: null
+        totalBytes: null,
     };
     astorb.updateLoadingOverlay(0, null);
 };
 
-astorb.updateLoadingOverlay = function(loaded, total)
+astorb.updateLoadingOverlay = function (loaded, total)
 {
     var elements = astorb.loadingElements;
     if (!elements)
@@ -133,7 +137,7 @@ astorb.updateLoadingOverlay = function(loaded, total)
     }
 };
 
-astorb.hideLoadingOverlay = function()
+astorb.hideLoadingOverlay = function ()
 {
     var elements = astorb.loadingElements;
     if (!elements)
@@ -144,7 +148,7 @@ astorb.hideLoadingOverlay = function()
 };
 
 // Resize canvas drawing buffer + viewport to match CSS size.
-astorb.resizeWebGL = function()
+astorb.resizeWebGL = function ()
 {
     var canvas = astorb.canvas;
     var gl = astorb.gl;
@@ -180,7 +184,7 @@ astorb.resizeWebGL = function()
     }
 };
 
-astorb.updateProjectionMatrix = function()
+astorb.updateProjectionMatrix = function ()
 {
     var gl = astorb.gl;
     var canvas = astorb.canvas;
@@ -192,7 +196,13 @@ astorb.updateProjectionMatrix = function()
     var cameraFieldOfViewRadians = Math.PI / 3; // 60 degree FOV
     var nearPlaneAU = 0.005;
     var farPlaneAU = 300.0;
-    mat4.perspective(perspectiveMatrix, cameraFieldOfViewRadians, aspectRatio, nearPlaneAU, farPlaneAU);
+    mat4.perspective(
+        perspectiveMatrix,
+        cameraFieldOfViewRadians,
+        aspectRatio,
+        nearPlaneAU,
+        farPlaneAU
+    );
     astorb.projectionMatrix = perspectiveMatrix;
 
     gl.useProgram(astorb.asteroidProgram);
@@ -206,10 +216,10 @@ astorb.updateProjectionMatrix = function()
 
 astorb.logDivId = "astorbLog";
 astorb.logDiv = document.getElementById(astorb.logDivId);
-astorb.log = function(message, color)
+astorb.log = function (inputMessage, inputColor)
 {
-    var color = color || "black";
-    var message = "" + message;
+    var color = inputColor || "black";
+    var message = "" + inputMessage;
 
     if (console && console.log)
     {
@@ -231,8 +241,14 @@ astorb.log = function(message, color)
 
 astorb.log("astorb3d.js", "black");
 astorb.log("by John W. Shaffstall", "black");
-astorb.log("Source data: <a href='https://asteroid.lowell.edu/astorb/'>https://asteroid.lowell.edu/astorb/</a>", "black");
-astorb.log("Orbital elements: <a href='https://en.wikipedia.org/wiki/Orbital_elements'>https://en.wikipedia.org/wiki/Orbital_elements</a>", "black");
+astorb.log(
+    "Source data: <a href='https://asteroid.lowell.edu/astorb/'>https://asteroid.lowell.edu/astorb/</a>",
+    "black"
+);
+astorb.log(
+    "Orbital elements: <a href='https://en.wikipedia.org/wiki/Orbital_elements'>https://en.wikipedia.org/wiki/Orbital_elements</a>",
+    "black"
+);
 
 astorb.canvasId = "astorb3dCanvas";
 astorb.depthBufferEnabled = true;
@@ -241,7 +257,7 @@ astorb.isDarkTheme = false;
 astorb.pointSizes = [1, 2, 3, 4];
 astorb.pointSizeIndex = 1;
 astorb.pointSize = astorb.pointSizes[astorb.pointSizeIndex];
-astorb.onLoadBody = function()
+astorb.onLoadBody = function ()
 {
     var canvas = document.getElementById(astorb.canvasId);
     if (canvas)
@@ -250,25 +266,27 @@ astorb.onLoadBody = function()
 
         try
         {
-            var contextOptions = {antialias: false, depth: true};
-            gl = canvas.getContext("webgl", contextOptions)
-                || canvas.getContext("experimental-webgl", contextOptions);
+            var contextOptions = { antialias: false, depth: true };
+            gl =
+                canvas.getContext("webgl", contextOptions) ||
+                canvas.getContext("experimental-webgl", contextOptions);
             var initWebGLSuccess = astorb.initWebGL(gl, canvas);
             if (initWebGLSuccess)
             {
                 // Keep WebGL sized to the CSS layout.
                 astorb.resizeWebGL();
 
-                if (typeof ResizeObserver !== 'undefined')
+                if (typeof ResizeObserver !== "undefined")
                 {
-                    astorb._resizeObserver = new ResizeObserver(function() {
+                    astorb._resizeObserver = new ResizeObserver(function ()
+                    {
                         astorb.resizeWebGL();
                     });
                     astorb._resizeObserver.observe(canvas);
                 }
                 else
                 {
-                    window.addEventListener('resize', astorb.resizeWebGL);
+                    window.addEventListener("resize", astorb.resizeWebGL);
                 }
 
                 astorb.setupTimeControls();
@@ -283,18 +301,18 @@ astorb.onLoadBody = function()
                 astorb.loadAstorbData();
             }
         }
-        catch(exception)
+        catch (exception)
         {
             astorb.log(exception, "yellow");
         }
     }
     else
     {
-        astorb.log("unable to find canvas element with id '"+ astorb.canvasId +"'");
+        astorb.log("unable to find canvas element with id '" + astorb.canvasId + "'");
     }
 };
 
-astorb.initWebGL = function(gl, canvas)
+astorb.initWebGL = function (gl, canvas)
 {
     var success = false;
     astorb.gl = gl;
@@ -325,7 +343,7 @@ astorb.initWebGL = function(gl, canvas)
     return success;
 };
 
-astorb.applyDepthBufferState = function()
+astorb.applyDepthBufferState = function ()
 {
     var gl = astorb.gl;
     if (!gl) return;
@@ -344,7 +362,7 @@ astorb.applyDepthBufferState = function()
     }
 };
 
-astorb.initShaders = function(gl)
+astorb.initShaders = function (gl)
 {
     var fragmentShader = astorb.getShader(gl, "shader-fs");
     var vertexShader = astorb.getShader(gl, "shader-vs");
@@ -359,7 +377,10 @@ astorb.initShaders = function(gl)
     // if creating the shader program failed, alert
     if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS))
     {
-        astorb.log("Unable to initialize the shader program: " + gl.getProgramInfoLog(shaderProgram), "red");
+        astorb.log(
+            "Unable to initialize the shader program: " + gl.getProgramInfoLog(shaderProgram),
+            "red"
+        );
     }
 
     gl.useProgram(shaderProgram);
@@ -369,12 +390,27 @@ astorb.initShaders = function(gl)
     var aEccentricity = gl.getAttribLocation(shaderProgram, "aEccentricity");
     var aInclination = gl.getAttribLocation(shaderProgram, "aInclination");
     var aArgumentOfPerihelion = gl.getAttribLocation(shaderProgram, "aArgumentOfPerihelion");
-    var aLongitudeOfAscendingNode = gl.getAttribLocation(shaderProgram, "aLongitudeOfAscendingNode");
+    var aLongitudeOfAscendingNode = gl.getAttribLocation(
+        shaderProgram,
+        "aLongitudeOfAscendingNode"
+    );
     var aMeanAnomaly = gl.getAttribLocation(shaderProgram, "aMeanAnomaly");
 
-    astorb.log("Attribute locations: a aSemimajorAxis=" + aSemimajorAxis + " e aEccentricity=" + aEccentricity +
-               " i aInclination=" + aInclination + " w aArgumentOfPerihelion=" + aArgumentOfPerihelion +
-               " O aLongitudeOfAscendingNode=" + aLongitudeOfAscendingNode + " M aMeanAnomaly=" + aMeanAnomaly, "blue");
+    astorb.log(
+        "Attribute locations: a aSemimajorAxis=" +
+            aSemimajorAxis +
+            " e aEccentricity=" +
+            aEccentricity +
+            " i aInclination=" +
+            aInclination +
+            " w aArgumentOfPerihelion=" +
+            aArgumentOfPerihelion +
+            " O aLongitudeOfAscendingNode=" +
+            aLongitudeOfAscendingNode +
+            " M aMeanAnomaly=" +
+            aMeanAnomaly,
+        "blue"
+    );
 
     // Only enable valid attribute arrays (location >= 0)
     if (aSemimajorAxis >= 0) gl.enableVertexAttribArray(aSemimajorAxis);
@@ -392,7 +428,7 @@ astorb.initShaders = function(gl)
     astorb.aMeanAnomaly = aMeanAnomaly;
 };
 
-astorb.initBodyShaders = function(gl)
+astorb.initBodyShaders = function (gl)
 {
     var fragmentShader = astorb.getShader(gl, "shader-bodies-fs");
     var vertexShader = astorb.getShader(gl, "shader-bodies-vs");
@@ -404,24 +440,27 @@ astorb.initBodyShaders = function(gl)
 
     if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS))
     {
-        astorb.log("Unable to initialize the body shader program: " + gl.getProgramInfoLog(shaderProgram), "red");
+        astorb.log(
+            "Unable to initialize the body shader program: " + gl.getProgramInfoLog(shaderProgram),
+            "red"
+        );
     }
 
     astorb.bodyProgram = shaderProgram;
     astorb.bodyAttributes = {
         position: gl.getAttribLocation(shaderProgram, "aPosition"),
         radius: gl.getAttribLocation(shaderProgram, "aRadius"),
-        color: gl.getAttribLocation(shaderProgram, "aColor")
+        color: gl.getAttribLocation(shaderProgram, "aColor"),
     };
     astorb.bodyUniforms = {
         mvMatrix: gl.getUniformLocation(shaderProgram, "uMVMatrix"),
         pMatrix: gl.getUniformLocation(shaderProgram, "uPMatrix"),
         pointScale: gl.getUniformLocation(shaderProgram, "uPointScale"),
-        opacity: gl.getUniformLocation(shaderProgram, "uOpacity")
+        opacity: gl.getUniformLocation(shaderProgram, "uOpacity"),
     };
 };
 
-astorb.getShader = function(gl, shaderId)
+astorb.getShader = function (gl, shaderId)
 {
     var shaderScript, theSource, currentChild, shader;
 
@@ -435,7 +474,7 @@ astorb.getShader = function(gl, shaderId)
     theSource = "";
     currentChild = shaderScript.firstChild;
 
-    while(currentChild)
+    while (currentChild)
     {
         if (currentChild.nodeType == currentChild.TEXT_NODE)
         {
@@ -464,7 +503,10 @@ astorb.getShader = function(gl, shaderId)
     // See if it compiled successfully
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS))
     {
-        astorb.log("An error occurred compiling the shaders: " + gl.getShaderInfoLog(shader), "red");
+        astorb.log(
+            "An error occurred compiling the shaders: " + gl.getShaderInfoLog(shader),
+            "red"
+        );
         return null;
     }
 
@@ -472,26 +514,32 @@ astorb.getShader = function(gl, shaderId)
 };
 
 astorb.resourcePath = "temp/astorb3d.bin";
-astorb.loadAstorbData = function()
+astorb.loadAstorbData = function ()
 {
     var resourcePath = astorb.resourcePath;
     astorb.log("loading '" + resourcePath + "'", "blue");
     astorb.showLoadingOverlay();
-    astorb.loader = new astorb.Loader(resourcePath, astorb.onLoadAstorbData, astorb.updateLoadingOverlay);
+    astorb.loader = new astorb.Loader(
+        resourcePath,
+        astorb.onLoadAstorbData,
+        astorb.updateLoadingOverlay
+    );
 };
 
-astorb.Loader = function(path, callback, progressCallback)
+astorb.Loader = function (path, inputCallback, inputProgressCallback)
 {
     this.path = path || null;
-    var callback = callback || function(){};
-    var progressCallback = progressCallback || function(){};
+    var callback = inputCallback || function ()
+    {};
+    var progressCallback = inputProgressCallback || function ()
+    {};
 
     var request = new XMLHttpRequest();
     this.request = request;
 
     request.open("GET", path, true);
     request.responseType = "arraybuffer";
-    request.onreadystatechange = function()
+    request.onreadystatechange = function ()
     {
         if (request.readyState === 4)
         {
@@ -501,7 +549,7 @@ astorb.Loader = function(path, callback, progressCallback)
         }
     };
 
-    request.onprogress = function(event)
+    request.onprogress = function (event)
     {
         var totalBytes = event.lengthComputable ? event.total : null;
         progressCallback(event.loaded, totalBytes);
@@ -510,17 +558,15 @@ astorb.Loader = function(path, callback, progressCallback)
     request.send();
 };
 
-astorb.onLoadAstorbData = function(errorCode, response)
+astorb.onLoadAstorbData = function (errorCode, response)
 {
-    if (errorCode == 200
-        && response
-        && response instanceof ArrayBuffer)
+    if (errorCode == 200 && response && response instanceof ArrayBuffer)
     {
         astorb.log("loaded astorb data", "green");
         astorb.hideLoadingOverlay();
         astorb.dataLoaded = true;
         window.__astorbDataLoaded = true;
-        document.dispatchEvent(new CustomEvent('astorb:data-loaded'));
+        document.dispatchEvent(new CustomEvent("astorb:data-loaded"));
         var gl = astorb.gl;
 
         var astorbFloats = new Float32Array(response);
@@ -533,13 +579,24 @@ astorb.onLoadAstorbData = function(errorCode, response)
         astorb.refreshAsteroidControls();
 
         // Debug: log first asteroid's orbital elements
-        if (asteroidCount > 0) {
-            astorb.log("First asteroid: M=" + astorbFloats[0].toFixed(2) +
-                       " w=" + astorbFloats[1].toFixed(2) +
-                       " O=" + astorbFloats[2].toFixed(2) +
-                       " i=" + astorbFloats[3].toFixed(2) +
-                       " e=" + astorbFloats[4].toFixed(4) +
-                       " a=" + astorbFloats[5].toFixed(4) + " AU", "green");
+        if (asteroidCount > 0)
+        {
+            astorb.log(
+                "First asteroid: M=" +
+                    astorbFloats[0].toFixed(2) +
+                    " w=" +
+                    astorbFloats[1].toFixed(2) +
+                    " O=" +
+                    astorbFloats[2].toFixed(2) +
+                    " i=" +
+                    astorbFloats[3].toFixed(2) +
+                    " e=" +
+                    astorbFloats[4].toFixed(4) +
+                    " a=" +
+                    astorbFloats[5].toFixed(4) +
+                    " AU",
+                "green"
+            );
         }
 
         var astorbBuffer = gl.createBuffer();
@@ -564,15 +621,15 @@ astorb.camera = {
     // azimuth: horizontal angle in the ecliptic plane (X-Y). 0 = looking from +Y toward origin.
     // elevation: angle above/below the ecliptic plane. 0 = in plane, +80° = above, -80° = below.
     azimuth: 0.0,
-    elevation: 20.0 * Math.PI / 180.0,  // Start slightly above the ecliptic plane
-    distance: 12.0,       // Distance from origin in AU
+    elevation: (20.0 * Math.PI) / 180.0, // Start slightly above the ecliptic plane
+    distance: 12.0, // Distance from origin in AU
     minDistance: 1.0,
     maxDistance: 150.0,
     // Vertical orbit limits expressed as +/- degrees above/below the ecliptic.
-    maxElevationRadians: (80.0 * Math.PI / 180.0),
+    maxElevationRadians: (80.0 * Math.PI) / 180.0,
     isDragging: false,
     lastMouseX: 0,
-    lastMouseY: 0
+    lastMouseY: 0,
 };
 
 // Epoch configuration:
@@ -583,7 +640,7 @@ astorb.camera = {
 // reference time.
 astorb.epoch = {
     planetEpochMs: Date.UTC(2000, 0, 1, 12, 0, 0),
-    asteroidEpochMs: Date.UTC(2013, 9, 15, 12, 0, 0)
+    asteroidEpochMs: Date.UTC(2013, 9, 15, 12, 0, 0),
 };
 
 // Time offset (in seconds) between the planetary J2000.0 epoch and the asteroid elements epoch.
@@ -593,10 +650,10 @@ astorb.planetEpochOffsetSec = (astorb.epoch.asteroidEpochMs - astorb.epoch.plane
 
 // Time control
 astorb.time = {
-    simTime: 0,              // Simulation time in seconds
-    timeScale: 1000000,      // Speed multiplier (1 million = ~1 year per 30 seconds)
+    simTime: 0, // Simulation time in seconds
+    timeScale: 1000000, // Speed multiplier (1 million = ~1 year per 30 seconds)
     lastTimestamp: 0,
-    paused: false
+    paused: false,
 };
 
 astorb.motionBlur = {
@@ -604,7 +661,7 @@ astorb.motionBlur = {
     sampleCount: 3,
     spanMultiplier: 12,
     maxSpanSeconds: 24 * 60 * 60,
-    opacity: 0.6
+    opacity: 0.6,
 };
 
 astorb.dataLoaded = false;
@@ -613,7 +670,7 @@ window.__astorbDataLoaded = false;
 window.__astorbFirstFrameRendered = false;
 astorb.asteroidDrawCount = 0;
 
-astorb.initBuffers = function(gl)
+astorb.initBuffers = function (gl)
 {
     var canvas = astorb.canvas;
     var aspectRatio = canvas.width / canvas.height;
@@ -623,7 +680,13 @@ astorb.initBuffers = function(gl)
     var nearPlaneAU = 0.005;
     var farPlaneAU = 300.0;
     astorb.farPlaneAU = farPlaneAU;
-    mat4.perspective(perspectiveMatrix, cameraFieldOfViewRadians, aspectRatio, nearPlaneAU, farPlaneAU);
+    mat4.perspective(
+        perspectiveMatrix,
+        cameraFieldOfViewRadians,
+        aspectRatio,
+        nearPlaneAU,
+        farPlaneAU
+    );
     astorb.projectionMatrix = perspectiveMatrix;
 
     gl.useProgram(astorb.asteroidProgram);
@@ -676,95 +739,212 @@ astorb.initBuffers = function(gl)
     astorb.updateViewMatrix();
 };
 
-astorb.configureAttributePointers = function(gl)
+astorb.configureAttributePointers = function (gl)
 {
     var bytesPerFloat = 4;
     var floatsPerVertex = 6;
     var floatStride = floatsPerVertex * bytesPerFloat;
     astorb.attributeStride = floatStride;
 
-    if (astorb.aMeanAnomaly >= 0) {
+    if (astorb.aMeanAnomaly >= 0)
+    {
         gl.vertexAttribPointer(astorb.aMeanAnomaly, 1, gl.FLOAT, false, floatStride, 0);
     }
-    if (astorb.aArgumentOfPerihelion >= 0) {
+    if (astorb.aArgumentOfPerihelion >= 0)
+    {
         gl.vertexAttribPointer(astorb.aArgumentOfPerihelion, 1, gl.FLOAT, false, floatStride, 4);
     }
-    if (astorb.aLongitudeOfAscendingNode >= 0) {
-        gl.vertexAttribPointer(astorb.aLongitudeOfAscendingNode, 1, gl.FLOAT, false, floatStride, 8);
+    if (astorb.aLongitudeOfAscendingNode >= 0)
+    {
+        gl.vertexAttribPointer(
+            astorb.aLongitudeOfAscendingNode,
+            1,
+            gl.FLOAT,
+            false,
+            floatStride,
+            8
+        );
     }
-    if (astorb.aInclination >= 0) {
+    if (astorb.aInclination >= 0)
+    {
         gl.vertexAttribPointer(astorb.aInclination, 1, gl.FLOAT, false, floatStride, 12);
     }
-    if (astorb.aEccentricity >= 0) {
+    if (astorb.aEccentricity >= 0)
+    {
         gl.vertexAttribPointer(astorb.aEccentricity, 1, gl.FLOAT, false, floatStride, 16);
     }
-    if (astorb.aSemimajorAxis >= 0) {
+    if (astorb.aSemimajorAxis >= 0)
+    {
         gl.vertexAttribPointer(astorb.aSemimajorAxis, 1, gl.FLOAT, false, floatStride, 20);
     }
 };
 
 astorb.planetOrbits = [
-    {name: "Mercury", a: 0.38709927, e: 0.20563593, i: 7.00497902, w: 29.12703035, O: 48.33076593, M: 174.795884},
-    {name: "Venus", a: 0.72333566, e: 0.00677672, i: 3.39467605, w: 54.92262463, O: 76.67984255, M: 50.416113},
-    {name: "Earth", a: 1.00000261, e: 0.01671123, i: -0.00001531, w: 102.93768193, O: -11.26064, M: 100.464571},
-    {name: "Mars", a: 1.52371034, e: 0.09339410, i: 1.84969142, w: 286.537, O: 49.55953891, M: 19.412},
-    {name: "Jupiter", a: 5.20288700, e: 0.04838624, i: 1.30439695, w: 273.867, O: 100.47390909, M: 20.020},
-    {name: "Saturn", a: 9.53667594, e: 0.05386179, i: 2.48599187, w: 339.392, O: 113.66242448, M: 317.020},
-    {name: "Uranus", a: 19.18916464, e: 0.04725744, i: 0.77263783, w: 96.998857, O: 74.01692503, M: 142.2386},
-    {name: "Neptune", a: 30.06992276, e: 0.00859048, i: 1.77004347, w: 273.187, O: 131.78422574, M: 256.228}
+    {
+        name: "Mercury",
+        a: 0.38709927,
+        e: 0.20563593,
+        i: 7.00497902,
+        w: 29.12703035,
+        O: 48.33076593,
+        M: 174.795884,
+    },
+    {
+        name: "Venus",
+        a: 0.72333566,
+        e: 0.00677672,
+        i: 3.39467605,
+        w: 54.92262463,
+        O: 76.67984255,
+        M: 50.416113,
+    },
+    {
+        name: "Earth",
+        a: 1.00000261,
+        e: 0.01671123,
+        i: -0.00001531,
+        w: 102.93768193,
+        O: -11.26064,
+        M: 100.464571,
+    },
+    {
+        name: "Mars",
+        a: 1.52371034,
+        e: 0.0933941,
+        i: 1.84969142,
+        w: 286.537,
+        O: 49.55953891,
+        M: 19.412,
+    },
+    {
+        name: "Jupiter",
+        a: 5.202887,
+        e: 0.04838624,
+        i: 1.30439695,
+        w: 273.867,
+        O: 100.47390909,
+        M: 20.02,
+    },
+    {
+        name: "Saturn",
+        a: 9.53667594,
+        e: 0.05386179,
+        i: 2.48599187,
+        w: 339.392,
+        O: 113.66242448,
+        M: 317.02,
+    },
+    {
+        name: "Uranus",
+        a: 19.18916464,
+        e: 0.04725744,
+        i: 0.77263783,
+        w: 96.998857,
+        O: 74.01692503,
+        M: 142.2386,
+    },
+    {
+        name: "Neptune",
+        a: 30.06992276,
+        e: 0.00859048,
+        i: 1.77004347,
+        w: 273.187,
+        O: 131.78422574,
+        M: 256.228,
+    },
 ];
 
 astorb.dwarfPlanetOrbits = [
-    {name: "Ceres", a: 2.7675, e: 0.0758, i: 10.594, w: 73.5977, O: 80.3055, M: 95.989},
-    {name: "Pluto", a: 39.482, e: 0.2488, i: 17.14, w: 113.763, O: 110.299, M: 14.53},
-    {name: "Haumea", a: 43.218, e: 0.191, i: 28.19, w: 240.6, O: 121.9, M: 205.1},
-    {name: "Makemake", a: 45.436, e: 0.161, i: 28.98, w: 294.8, O: 79.6, M: 92.3},
-    {name: "Eris", a: 67.781, e: 0.44, i: 44.04, w: 151.6, O: 35.95, M: 204.4}
+    { name: "Ceres", a: 2.7675, e: 0.0758, i: 10.594, w: 73.5977, O: 80.3055, M: 95.989 },
+    { name: "Pluto", a: 39.482, e: 0.2488, i: 17.14, w: 113.763, O: 110.299, M: 14.53 },
+    { name: "Haumea", a: 43.218, e: 0.191, i: 28.19, w: 240.6, O: 121.9, M: 205.1 },
+    { name: "Makemake", a: 45.436, e: 0.161, i: 28.98, w: 294.8, O: 79.6, M: 92.3 },
+    { name: "Eris", a: 67.781, e: 0.44, i: 44.04, w: 151.6, O: 35.95, M: 204.4 },
 ];
 
 astorb.constants = {
     auKm: 149597870.7,
-    muSun: 3.96401599E-14
+    muSun: 3.96401599e-14,
 };
 
 astorb.bodyScale = 320000.0;
 astorb.radiusScale = {
-    km: 6000.0
+    km: 6000.0,
 };
 
-astorb.bodies = [
-    {name: "Sun", type: "sun", radiusKm: 696340, color: [1.0, 0.85, 0.3]}
-];
+astorb.bodies = [{ name: "Sun", type: "sun", radiusKm: 696340, color: [1.0, 0.85, 0.3] }];
 
 astorb.planetBodies = [
-    {name: "Mercury", radiusKm: 2439.7, color: [0.7, 0.7, 0.7]},
-    {name: "Venus", radiusKm: 6051.8, color: [0.9, 0.75, 0.5]},
-    {name: "Earth", radiusKm: 6371.0, color: [0.3, 0.5, 1.0]},
-    {name: "Mars", radiusKm: 3389.5, color: [0.9, 0.4, 0.2]},
-    {name: "Jupiter", radiusKm: 69911, color: [0.9, 0.8, 0.6]},
-    {name: "Saturn", radiusKm: 58232, color: [0.9, 0.8, 0.5]},
-    {name: "Uranus", radiusKm: 25362, color: [0.6, 0.8, 0.9]},
-    {name: "Neptune", radiusKm: 24622, color: [0.3, 0.5, 0.9]}
+    { name: "Mercury", radiusKm: 2439.7, color: [0.7, 0.7, 0.7] },
+    { name: "Venus", radiusKm: 6051.8, color: [0.9, 0.75, 0.5] },
+    { name: "Earth", radiusKm: 6371.0, color: [0.3, 0.5, 1.0] },
+    { name: "Mars", radiusKm: 3389.5, color: [0.9, 0.4, 0.2] },
+    { name: "Jupiter", radiusKm: 69911, color: [0.9, 0.8, 0.6] },
+    { name: "Saturn", radiusKm: 58232, color: [0.9, 0.8, 0.5] },
+    { name: "Uranus", radiusKm: 25362, color: [0.6, 0.8, 0.9] },
+    { name: "Neptune", radiusKm: 24622, color: [0.3, 0.5, 0.9] },
 ];
 
 astorb.dwarfPlanetBodies = [
-    {name: "Ceres", radiusKm: 473, color: [0.75, 0.7, 0.65], sizeScale: 0.6},
-    {name: "Pluto", radiusKm: 1188.3, color: [0.85, 0.75, 0.65], sizeScale: 0.6},
-    {name: "Haumea", radiusKm: 816, color: [0.85, 0.9, 0.95], sizeScale: 0.6},
-    {name: "Makemake", radiusKm: 715, color: [0.9, 0.6, 0.35], sizeScale: 0.6},
-    {name: "Eris", radiusKm: 1163, color: [0.8, 0.85, 0.95], sizeScale: 0.6}
+    { name: "Ceres", radiusKm: 473, color: [0.75, 0.7, 0.65], sizeScale: 0.6 },
+    { name: "Pluto", radiusKm: 1188.3, color: [0.85, 0.75, 0.65], sizeScale: 0.6 },
+    { name: "Haumea", radiusKm: 816, color: [0.85, 0.9, 0.95], sizeScale: 0.6 },
+    { name: "Makemake", radiusKm: 715, color: [0.9, 0.6, 0.35], sizeScale: 0.6 },
+    { name: "Eris", radiusKm: 1163, color: [0.8, 0.85, 0.95], sizeScale: 0.6 },
 ];
 
 astorb.moonBodies = [
-    {name: "Moon", parent: "Earth", radiusKm: 1737.4, semiMajorAxisKm: 384400, periodDays: 27.321661, color: [0.8, 0.8, 0.85]},
-    {name: "Phobos", parent: "Mars", radiusKm: 11.3, semiMajorAxisKm: 9376, periodDays: 0.31891, color: [0.7, 0.7, 0.7]},
-    {name: "Ganymede", parent: "Jupiter", radiusKm: 2634.1, semiMajorAxisKm: 1070400, periodDays: 7.154553, color: [0.75, 0.7, 0.6]},
-    {name: "Titan", parent: "Saturn", radiusKm: 2574.7, semiMajorAxisKm: 1221870, periodDays: 15.945, color: [0.85, 0.7, 0.5]},
-    {name: "Titania", parent: "Uranus", radiusKm: 788.9, semiMajorAxisKm: 435910, periodDays: 8.706, color: [0.7, 0.8, 0.9]},
-    {name: "Triton", parent: "Neptune", radiusKm: 1353.4, semiMajorAxisKm: 354759, periodDays: -5.87685, color: [0.7, 0.8, 0.9]}
+    {
+        name: "Moon",
+        parent: "Earth",
+        radiusKm: 1737.4,
+        semiMajorAxisKm: 384400,
+        periodDays: 27.321661,
+        color: [0.8, 0.8, 0.85],
+    },
+    {
+        name: "Phobos",
+        parent: "Mars",
+        radiusKm: 11.3,
+        semiMajorAxisKm: 9376,
+        periodDays: 0.31891,
+        color: [0.7, 0.7, 0.7],
+    },
+    {
+        name: "Ganymede",
+        parent: "Jupiter",
+        radiusKm: 2634.1,
+        semiMajorAxisKm: 1070400,
+        periodDays: 7.154553,
+        color: [0.75, 0.7, 0.6],
+    },
+    {
+        name: "Titan",
+        parent: "Saturn",
+        radiusKm: 2574.7,
+        semiMajorAxisKm: 1221870,
+        periodDays: 15.945,
+        color: [0.85, 0.7, 0.5],
+    },
+    {
+        name: "Titania",
+        parent: "Uranus",
+        radiusKm: 788.9,
+        semiMajorAxisKm: 435910,
+        periodDays: 8.706,
+        color: [0.7, 0.8, 0.9],
+    },
+    {
+        name: "Triton",
+        parent: "Neptune",
+        radiusKm: 1353.4,
+        semiMajorAxisKm: 354759,
+        periodDays: -5.87685,
+        color: [0.7, 0.8, 0.9],
+    },
 ];
 
-astorb.initPlanetOrbits = function(gl)
+astorb.initPlanetOrbits = function (gl)
 {
     var segments = 240;
     var floatsPerVertex = 6;
@@ -779,7 +959,11 @@ astorb.initPlanetOrbits = function(gl)
     for (var planetIndex = 0; planetIndex < planetCount; planetIndex++)
     {
         var planet = astorb.planetOrbits[planetIndex];
-        offsets.push({name: planet.name, start: planetIndex * verticesPerOrbit, count: verticesPerOrbit});
+        offsets.push({
+            name: planet.name,
+            start: planetIndex * verticesPerOrbit,
+            count: verticesPerOrbit,
+        });
 
         for (var segmentIndex = 0; segmentIndex < verticesPerOrbit; segmentIndex++)
         {
@@ -802,7 +986,7 @@ astorb.initPlanetOrbits = function(gl)
     astorb.planetOrbitSegments = segments;
 };
 
-astorb.initDwarfPlanetOrbits = function(gl)
+astorb.initDwarfPlanetOrbits = function (gl)
 {
     var segments = 480;
     var floatsPerVertex = 6;
@@ -816,7 +1000,11 @@ astorb.initDwarfPlanetOrbits = function(gl)
     for (var orbitIndex = 0; orbitIndex < dwarfCount; orbitIndex++)
     {
         var orbit = astorb.dwarfPlanetOrbits[orbitIndex];
-        offsets.push({name: orbit.name, start: orbitIndex * verticesPerOrbit, count: verticesPerOrbit});
+        offsets.push({
+            name: orbit.name,
+            start: orbitIndex * verticesPerOrbit,
+            count: verticesPerOrbit,
+        });
 
         for (var segmentIndex = 0; segmentIndex < verticesPerOrbit; segmentIndex++)
         {
@@ -839,9 +1027,13 @@ astorb.initDwarfPlanetOrbits = function(gl)
     astorb.dwarfPlanetOrbitSegments = segments;
 };
 
-astorb.initBodies = function(gl)
+astorb.initBodies = function (gl)
 {
-    var bodyList = astorb.bodies.concat(astorb.planetBodies, astorb.dwarfPlanetBodies, astorb.moonBodies);
+    var bodyList = astorb.bodies.concat(
+        astorb.planetBodies,
+        astorb.dwarfPlanetBodies,
+        astorb.moonBodies
+    );
     astorb.bodyList = bodyList;
     astorb.bodyCount = bodyList.length;
 
@@ -851,7 +1043,7 @@ astorb.initBodies = function(gl)
     astorb.bodyBuffer = bodyBuffer;
 };
 
-astorb.getScaledRadiusAu = function(radiusKm, sizeScale)
+astorb.getScaledRadiusAu = function (radiusKm, sizeScale)
 {
     var logRadius = Math.log(radiusKm) / Math.LN10;
     var scaledKm = logRadius * astorb.radiusScale.km;
@@ -859,7 +1051,7 @@ astorb.getScaledRadiusAu = function(radiusKm, sizeScale)
     return (scaledKm * scale) / astorb.constants.auKm;
 };
 
-astorb.computeKeplerPosition = function(orbit, timeSec)
+astorb.computeKeplerPosition = function (orbit, timeSec)
 {
     // Adjust time so planet positions (using J2000.0 orbital elements) align with the asteroid epoch (2013-10-15),
     // ensuring all bodies are computed for the same reference time.
@@ -882,19 +1074,22 @@ astorb.computeKeplerPosition = function(orbit, timeSec)
         E = E - (E - e * Math.sin(E) - M) / (1.0 - e * Math.cos(E));
     }
     var r = a * (1.0 - e * Math.cos(E));
-    var nu = 2.0 * Math.atan2(Math.sqrt(1.0 + e) * Math.sin(E / 2.0),
-        Math.sqrt(1.0 - e) * Math.cos(E / 2.0));
+    var nu =
+        2.0 *
+        Math.atan2(Math.sqrt(1.0 + e) * Math.sin(E / 2.0), Math.sqrt(1.0 - e) * Math.cos(E / 2.0));
 
     var theta = omega + nu;
 
-    var x = r * (Math.cos(sigma) * Math.cos(theta) - Math.sin(sigma) * Math.sin(theta) * Math.cos(i));
-    var y = r * (Math.sin(sigma) * Math.cos(theta) + Math.cos(sigma) * Math.sin(theta) * Math.cos(i));
+    var x =
+        r * (Math.cos(sigma) * Math.cos(theta) - Math.sin(sigma) * Math.sin(theta) * Math.cos(i));
+    var y =
+        r * (Math.sin(sigma) * Math.cos(theta) + Math.cos(sigma) * Math.sin(theta) * Math.cos(i));
     var z = r * (Math.sin(i) * Math.sin(theta));
 
     return [x, y, z];
 };
 
-astorb.computeOrbitPoint = function(orbit, meanAnomalyDeg)
+astorb.computeOrbitPoint = function (orbit, meanAnomalyDeg)
 {
     var deg2rad = Math.PI / 180.0;
     var a = orbit.a;
@@ -910,19 +1105,22 @@ astorb.computeOrbitPoint = function(orbit, meanAnomalyDeg)
         E = E - (E - e * Math.sin(E) - M) / (1.0 - e * Math.cos(E));
     }
     var r = a * (1.0 - e * Math.cos(E));
-    var nu = 2.0 * Math.atan2(Math.sqrt(1.0 + e) * Math.sin(E / 2.0),
-        Math.sqrt(1.0 - e) * Math.cos(E / 2.0));
+    var nu =
+        2.0 *
+        Math.atan2(Math.sqrt(1.0 + e) * Math.sin(E / 2.0), Math.sqrt(1.0 - e) * Math.cos(E / 2.0));
 
     var theta = omega + nu;
 
-    var x = r * (Math.cos(sigma) * Math.cos(theta) - Math.sin(sigma) * Math.sin(theta) * Math.cos(i));
-    var y = r * (Math.sin(sigma) * Math.cos(theta) + Math.cos(sigma) * Math.sin(theta) * Math.cos(i));
+    var x =
+        r * (Math.cos(sigma) * Math.cos(theta) - Math.sin(sigma) * Math.sin(theta) * Math.cos(i));
+    var y =
+        r * (Math.sin(sigma) * Math.cos(theta) + Math.cos(sigma) * Math.sin(theta) * Math.cos(i));
     var z = r * (Math.sin(i) * Math.sin(theta));
 
     return [x, y, z];
 };
 
-astorb.initOrbitLabels = function()
+astorb.initOrbitLabels = function ()
 {
     var labelLayer = document.getElementById("labelLayer");
     if (!labelLayer)
@@ -934,7 +1132,7 @@ astorb.initOrbitLabels = function()
     labelLayer.innerHTML = "";
 
     var labels = [];
-    var addLabel = function(name, orbit, segments)
+    var addLabel = function (name, orbit, segments)
     {
         var label = document.createElement("div");
         label.className = "orbit-label";
@@ -944,25 +1142,33 @@ astorb.initOrbitLabels = function()
             name: name,
             orbit: orbit,
             segments: segments,
-            element: label
+            element: label,
         });
     };
 
     for (var planetIndex = 0; planetIndex < astorb.planetOrbits.length; planetIndex++)
     {
-        addLabel(astorb.planetOrbits[planetIndex].name, astorb.planetOrbits[planetIndex], astorb.planetOrbitSegments || 240);
+        addLabel(
+            astorb.planetOrbits[planetIndex].name,
+            astorb.planetOrbits[planetIndex],
+            astorb.planetOrbitSegments || 240
+        );
     }
 
     for (var dwarfIndex = 0; dwarfIndex < astorb.dwarfPlanetOrbits.length; dwarfIndex++)
     {
-        addLabel(astorb.dwarfPlanetOrbits[dwarfIndex].name, astorb.dwarfPlanetOrbits[dwarfIndex], astorb.dwarfPlanetOrbitSegments || 480);
+        addLabel(
+            astorb.dwarfPlanetOrbits[dwarfIndex].name,
+            astorb.dwarfPlanetOrbits[dwarfIndex],
+            astorb.dwarfPlanetOrbitSegments || 480
+        );
     }
 
     astorb.orbitLabels = labels;
     labelLayer.style.display = astorb.showOrbitLabels ? "block" : "none";
 };
 
-astorb.updateOrbitLabels = function()
+astorb.updateOrbitLabels = function ()
 {
     if (!astorb.showOrbitLabels)
     {
@@ -1039,11 +1245,11 @@ astorb.updateOrbitLabels = function()
     }
 };
 
-astorb.computeMoonPosition = function(moon, parentPosition, timeSec)
+astorb.computeMoonPosition = function (moon, parentPosition, timeSec)
 {
     var periodSec = Math.abs(moon.periodDays) * 24.0 * 3600.0;
     var direction = moon.periodDays < 0 ? -1.0 : 1.0;
-    var meanMotion = (2.0 * Math.PI / periodSec) * direction;
+    var meanMotion = ((2.0 * Math.PI) / periodSec) * direction;
     var meanAnomaly = meanMotion * timeSec;
     var distanceAu = moon.semiMajorAxisKm / astorb.constants.auKm;
 
@@ -1051,14 +1257,10 @@ astorb.computeMoonPosition = function(moon, parentPosition, timeSec)
     var y = distanceAu * Math.sin(meanAnomaly);
     var z = 0.0;
 
-    return [
-        parentPosition[0] + x,
-        parentPosition[1] + y,
-        parentPosition[2] + z
-    ];
+    return [parentPosition[0] + x, parentPosition[1] + y, parentPosition[2] + z];
 };
 
-astorb.updateBodies = function(timeSec)
+astorb.updateBodies = function (timeSec)
 {
     var gl = astorb.gl;
     if (!astorb.bodyBuffer) return;
@@ -1128,26 +1330,32 @@ astorb.updateBodies = function(timeSec)
     gl.bufferData(gl.ARRAY_BUFFER, bodyData, gl.DYNAMIC_DRAW);
 };
 
-astorb.setupCameraControls = function(canvas)
+astorb.setupCameraControls = function (canvas)
 {
     var camera = astorb.camera;
 
     // Mouse down - start dragging
-    canvas.addEventListener('mousedown', function(event) {
+    canvas.addEventListener("mousedown", function (event)
+    {
         camera.isDragging = true;
         camera.lastMouseX = event.clientX;
         camera.lastMouseY = event.clientY;
-        canvas.focus();  // Focus canvas for keyboard input
+        canvas.focus(); // Focus canvas for keyboard input
         event.preventDefault();
     });
 
     // Mouse up - stop dragging
-    window.addEventListener('mouseup', function(event) {
-        camera.isDragging = false;
+    window.addEventListener("mouseup", function (event)
+    {
+        if (event)
+        {
+            camera.isDragging = false;
+        }
     });
 
     // Mouse move - rotate camera
-    canvas.addEventListener('mousemove', function(event) {
+    canvas.addEventListener("mousemove", function (event)
+    {
         if (!camera.isDragging) return;
 
         var deltaX = event.clientX - camera.lastMouseX;
@@ -1161,7 +1369,7 @@ astorb.setupCameraControls = function(canvas)
         camera.elevation += deltaY * rotateSpeed;
 
         // Clamp elevation to +/-80 degrees above/below the ecliptic.
-        var maxElev = camera.maxElevationRadians || (80.0 * Math.PI / 180.0);
+        var maxElev = camera.maxElevationRadians || (80.0 * Math.PI) / 180.0;
         camera.elevation = Math.max(-maxElev, Math.min(maxElev, camera.elevation));
 
         camera.lastMouseX = event.clientX;
@@ -1176,102 +1384,134 @@ astorb.setupCameraControls = function(canvas)
         lastX: 0,
         lastY: 0,
         lastDistance: 0,
-        isPinching: false
+        isPinching: false,
     };
 
-    canvas.addEventListener('touchstart', function(event) {
-        if (event.touches.length === 1) {
-            var touch = event.touches[0];
-            touchState.isDragging = true;
-            touchState.isPinching = false;
-            touchState.lastX = touch.clientX;
-            touchState.lastY = touch.clientY;
-        } else if (event.touches.length === 2) {
-            var dx = event.touches[0].clientX - event.touches[1].clientX;
-            var dy = event.touches[0].clientY - event.touches[1].clientY;
-            touchState.lastDistance = Math.sqrt(dx * dx + dy * dy);
-            touchState.isPinching = true;
-            touchState.isDragging = false;
-        }
-        event.preventDefault();
-    }, {passive: false});
+    canvas.addEventListener(
+        "touchstart",
+        function (event)
+        {
+            if (event.touches.length === 1)
+            {
+                var touch = event.touches[0];
+                touchState.isDragging = true;
+                touchState.isPinching = false;
+                touchState.lastX = touch.clientX;
+                touchState.lastY = touch.clientY;
+            }
+            else if (event.touches.length === 2)
+            {
+                var dx = event.touches[0].clientX - event.touches[1].clientX;
+                var dy = event.touches[0].clientY - event.touches[1].clientY;
+                touchState.lastDistance = Math.sqrt(dx * dx + dy * dy);
+                touchState.isPinching = true;
+                touchState.isDragging = false;
+            }
+            event.preventDefault();
+        },
+        { passive: false }
+    );
 
-    canvas.addEventListener('touchmove', function(event) {
-        if (event.touches.length === 1 && touchState.isDragging) {
-            var touch = event.touches[0];
-            var deltaX = touch.clientX - touchState.lastX;
-            var deltaY = touch.clientY - touchState.lastY;
+    canvas.addEventListener(
+        "touchmove",
+        function (event)
+        {
+            if (event.touches.length === 1 && touchState.isDragging)
+            {
+                var touch = event.touches[0];
+                var deltaX = touch.clientX - touchState.lastX;
+                var deltaY = touch.clientY - touchState.lastY;
 
-            var rotateSpeed = 0.005;
-            camera.azimuth += deltaX * rotateSpeed;
-            camera.elevation += deltaY * rotateSpeed;
+                var rotateSpeed = 0.005;
+                camera.azimuth += deltaX * rotateSpeed;
+                camera.elevation += deltaY * rotateSpeed;
 
-            var maxElev = camera.maxElevationRadians || (80.0 * Math.PI / 180.0);
-            camera.elevation = Math.max(-maxElev, Math.min(maxElev, camera.elevation));
+                var maxElev = camera.maxElevationRadians || (80.0 * Math.PI) / 180.0;
+                camera.elevation = Math.max(-maxElev, Math.min(maxElev, camera.elevation));
 
-            touchState.lastX = touch.clientX;
-            touchState.lastY = touch.clientY;
-            astorb.updateViewMatrix();
-        } else if (event.touches.length === 2 && touchState.isPinching) {
-            var dx = event.touches[0].clientX - event.touches[1].clientX;
-            var dy = event.touches[0].clientY - event.touches[1].clientY;
-            var distance = Math.sqrt(dx * dx + dy * dy);
-
-            if (touchState.lastDistance > 0) {
-                var zoomDelta = (touchState.lastDistance - distance) * 0.002;
-                camera.distance += zoomDelta * camera.distance;
-                camera.distance = Math.max(camera.minDistance, Math.min(camera.maxDistance, camera.distance));
+                touchState.lastX = touch.clientX;
+                touchState.lastY = touch.clientY;
                 astorb.updateViewMatrix();
             }
+            else if (event.touches.length === 2 && touchState.isPinching)
+            {
+                var dx = event.touches[0].clientX - event.touches[1].clientX;
+                var dy = event.touches[0].clientY - event.touches[1].clientY;
+                var distance = Math.sqrt(dx * dx + dy * dy);
 
-            touchState.lastDistance = distance;
-        }
-        event.preventDefault();
-    }, {passive: false});
+                if (touchState.lastDistance > 0)
+                {
+                    var zoomDelta = (touchState.lastDistance - distance) * 0.002;
+                    camera.distance += zoomDelta * camera.distance;
+                    camera.distance = Math.max(
+                        camera.minDistance,
+                        Math.min(camera.maxDistance, camera.distance)
+                    );
+                    astorb.updateViewMatrix();
+                }
 
-    canvas.addEventListener('touchend', function(event) {
-        if (event.touches.length === 0) {
-            touchState.isDragging = false;
-            touchState.isPinching = false;
-            touchState.lastDistance = 0;
-        }
-    }, {passive: false});
+                touchState.lastDistance = distance;
+            }
+            event.preventDefault();
+        },
+        { passive: false }
+    );
+
+    canvas.addEventListener(
+        "touchend",
+        function (event)
+        {
+            if (event.touches.length === 0)
+            {
+                touchState.isDragging = false;
+                touchState.isPinching = false;
+                touchState.lastDistance = 0;
+            }
+        },
+        { passive: false }
+    );
 
     // Mouse wheel - zoom
-    canvas.addEventListener('wheel', function(event) {
+    canvas.addEventListener("wheel", function (event)
+    {
         var zoomSpeed = 0.001;
         camera.distance += event.deltaY * zoomSpeed * camera.distance;
-        camera.distance = Math.max(camera.minDistance, Math.min(camera.maxDistance, camera.distance));
+        camera.distance = Math.max(
+            camera.minDistance,
+            Math.min(camera.maxDistance, camera.distance)
+        );
 
         astorb.updateViewMatrix();
         event.preventDefault();
     });
 
     // Keyboard controls - listen on both canvas and window
-    var handleKeydown = function(event) {
+    var handleKeydown = function (event)
+    {
         var time = astorb.time;
-        switch(event.key) {
-            case ' ':  // Space - pause/resume
+        switch (event.key)
+        {
+            case " ": // Space - pause/resume
                 time.paused = !time.paused;
                 astorb.log("Time " + (time.paused ? "paused" : "resumed"), "blue");
                 astorb.refreshTimeControls();
                 event.preventDefault();
                 break;
-            case 'ArrowUp':  // Speed up time
+            case "ArrowUp": // Speed up time
                 time.timeScale *= 2;
                 astorb.log("Time scale: " + time.timeScale.toExponential(1), "blue");
                 astorb.refreshTimeControls();
                 event.preventDefault();
                 break;
-            case 'ArrowDown':  // Slow down time
+            case "ArrowDown": // Slow down time
                 time.timeScale /= 2;
                 astorb.log("Time scale: " + time.timeScale.toExponential(1), "blue");
                 astorb.refreshTimeControls();
                 event.preventDefault();
                 break;
-            case '0':  // Reset time to 0
-            case 'o':
-            case 'O':
+            case "0": // Reset time to 0
+            case "o":
+            case "O":
                 time.simTime = 0;
                 astorb.log("Time reset to 0", "blue");
                 event.preventDefault();
@@ -1279,24 +1519,28 @@ astorb.setupCameraControls = function(canvas)
         }
     };
 
-    canvas.addEventListener('keydown', handleKeydown);
-    window.addEventListener('keydown', handleKeydown);
+    canvas.addEventListener("keydown", handleKeydown);
+    window.addEventListener("keydown", handleKeydown);
 
-    astorb.log("Controls: Drag to rotate, Scroll/pinch to zoom, Space=pause, Up/Down=speed, 0/O=reset time", "green");
+    astorb.log(
+        "Controls: Drag to rotate, Scroll/pinch to zoom, Space=pause, Up/Down=speed, 0/O=reset time",
+        "green"
+    );
     astorb.log("Click on canvas first to enable keyboard controls", "green");
 };
 
-astorb.setupTimeControls = function()
+astorb.setupTimeControls = function ()
 {
-    var pauseButton = document.getElementById('pauseButton');
-    var slowButton = document.getElementById('slowButton');
-    var fastButton = document.getElementById('fastButton');
-    var resetButton = document.getElementById('resetTimeButton');
-    var invertButton = document.getElementById('invertTimeButton');
+    var pauseButton = document.getElementById("pauseButton");
+    var slowButton = document.getElementById("slowButton");
+    var fastButton = document.getElementById("fastButton");
+    var resetButton = document.getElementById("resetTimeButton");
+    var invertButton = document.getElementById("invertTimeButton");
 
     if (pauseButton)
     {
-        pauseButton.addEventListener('click', function() {
+        pauseButton.addEventListener("click", function ()
+        {
             astorb.time.paused = !astorb.time.paused;
             astorb.log("Time " + (astorb.time.paused ? "paused" : "resumed"), "blue");
             astorb.refreshTimeControls();
@@ -1305,7 +1549,8 @@ astorb.setupTimeControls = function()
 
     if (slowButton)
     {
-        slowButton.addEventListener('click', function() {
+        slowButton.addEventListener("click", function ()
+        {
             astorb.time.timeScale /= 2;
             astorb.log("Time scale: " + astorb.time.timeScale.toExponential(1), "blue");
             astorb.refreshTimeControls();
@@ -1314,7 +1559,8 @@ astorb.setupTimeControls = function()
 
     if (fastButton)
     {
-        fastButton.addEventListener('click', function() {
+        fastButton.addEventListener("click", function ()
+        {
             astorb.time.timeScale *= 2;
             astorb.log("Time scale: " + astorb.time.timeScale.toExponential(1), "blue");
             astorb.refreshTimeControls();
@@ -1323,7 +1569,8 @@ astorb.setupTimeControls = function()
 
     if (resetButton)
     {
-        resetButton.addEventListener('click', function() {
+        resetButton.addEventListener("click", function ()
+        {
             astorb.time.simTime = 0;
             astorb.log("Time reset to 0", "blue");
             astorb.refreshTimeControls();
@@ -1332,7 +1579,8 @@ astorb.setupTimeControls = function()
 
     if (invertButton)
     {
-        invertButton.addEventListener('click', function() {
+        invertButton.addEventListener("click", function ()
+        {
             astorb.time.timeScale = -astorb.time.timeScale;
             var directionLabel = astorb.time.timeScale >= 0 ? "Forward" : "Reverse";
             astorb.log("Time direction: " + directionLabel, "blue");
@@ -1343,33 +1591,47 @@ astorb.setupTimeControls = function()
     astorb.refreshTimeControls();
 };
 
-astorb.setupAsteroidControls = function()
+astorb.setupAsteroidControls = function ()
 {
-    var halfButton = document.getElementById('asteroidHalfButton');
-    var doubleButton = document.getElementById('asteroidDoubleButton');
+    var halfButton = document.getElementById("asteroidHalfButton");
+    var doubleButton = document.getElementById("asteroidDoubleButton");
 
     if (halfButton)
     {
-        halfButton.addEventListener('click', function() {
+        halfButton.addEventListener("click", function ()
+        {
             var total = astorb.asteroidCount || 0;
             if (!total) return;
             var current = astorb.asteroidDrawCount || total;
             var nextCount = Math.max(1, Math.floor(current / 2));
             astorb.asteroidDrawCount = nextCount;
-            astorb.log("Asteroid draw count: " + astorb.formatNumber(nextCount) + " / " + astorb.formatNumber(total), "blue");
+            astorb.log(
+                "Asteroid draw count: " +
+                    astorb.formatNumber(nextCount) +
+                    " / " +
+                    astorb.formatNumber(total),
+                "blue"
+            );
             astorb.refreshAsteroidControls();
         });
     }
 
     if (doubleButton)
     {
-        doubleButton.addEventListener('click', function() {
+        doubleButton.addEventListener("click", function ()
+        {
             var total = astorb.asteroidCount || 0;
             if (!total) return;
             var current = astorb.asteroidDrawCount || total;
             var nextCount = Math.min(total, current * 2);
             astorb.asteroidDrawCount = nextCount;
-            astorb.log("Asteroid draw count: " + astorb.formatNumber(nextCount) + " / " + astorb.formatNumber(total), "blue");
+            astorb.log(
+                "Asteroid draw count: " +
+                    astorb.formatNumber(nextCount) +
+                    " / " +
+                    astorb.formatNumber(total),
+                "blue"
+            );
             astorb.refreshAsteroidControls();
         });
     }
@@ -1377,33 +1639,41 @@ astorb.setupAsteroidControls = function()
     astorb.refreshAsteroidControls();
 };
 
-astorb.setupDepthBufferControls = function()
+astorb.setupDepthBufferControls = function ()
 {
-    var depthButton = document.getElementById('depthBufferButton');
+    var depthButton = document.getElementById("depthBufferButton");
 
     if (depthButton)
     {
-        depthButton.addEventListener('click', function() {
+        depthButton.addEventListener("click", function ()
+        {
             astorb.depthBufferEnabled = !astorb.depthBufferEnabled;
             astorb.applyDepthBufferState();
             astorb.refreshDepthBufferControls();
-            astorb.log("Depth buffer " + (astorb.depthBufferEnabled ? "enabled" : "disabled"), "blue");
+            astorb.log(
+                "Depth buffer " + (astorb.depthBufferEnabled ? "enabled" : "disabled"),
+                "blue"
+            );
         });
     }
 
     astorb.refreshDepthBufferControls();
 };
 
-astorb.setupMotionBlurControls = function()
+astorb.setupMotionBlurControls = function ()
 {
-    var motionBlurButton = document.getElementById('motionBlurButton');
+    var motionBlurButton = document.getElementById("motionBlurButton");
 
     if (motionBlurButton)
     {
-        motionBlurButton.addEventListener('click', function() {
+        motionBlurButton.addEventListener("click", function ()
+        {
             astorb.motionBlur.enabled = !astorb.motionBlur.enabled;
             astorb.refreshMotionBlurControls();
-            astorb.log("Motion blur " + (astorb.motionBlur.enabled ? "enabled" : "disabled"), "blue");
+            astorb.log(
+                "Motion blur " + (astorb.motionBlur.enabled ? "enabled" : "disabled"),
+                "blue"
+            );
         });
     }
 
@@ -1411,15 +1681,15 @@ astorb.setupMotionBlurControls = function()
 };
 
 astorb.colorModes = [
-    {id: 0, label: "Color: XYZ"},
-    {id: 1, label: "Color: Orbit Shape"},
-    {id: 2, label: "Color: Camera Depth"},
-    {id: 3, label: "Color: Angular Velocity"},
-    {id: 4, label: "Color: Orbital Energy"}
+    { id: 0, label: "Color: XYZ" },
+    { id: 1, label: "Color: Orbit Shape" },
+    { id: 2, label: "Color: Camera Depth" },
+    { id: 3, label: "Color: Angular Velocity" },
+    { id: 4, label: "Color: Orbital Energy" },
 ];
 astorb.colorModeIndex = 3;
 
-astorb.applyColorMode = function()
+astorb.applyColorMode = function ()
 {
     var gl = astorb.gl;
     if (!gl || astorb.colorModeUniform === null) return;
@@ -1429,13 +1699,14 @@ astorb.applyColorMode = function()
     gl.uniform1i(astorb.colorModeUniform, mode.id);
 };
 
-astorb.setupRenderColorControls = function()
+astorb.setupRenderColorControls = function ()
 {
-    var renderButton = document.getElementById('renderColorButton');
+    var renderButton = document.getElementById("renderColorButton");
 
     if (renderButton)
     {
-        renderButton.addEventListener('click', function() {
+        renderButton.addEventListener("click", function ()
+        {
             astorb.colorModeIndex = (astorb.colorModeIndex + 1) % astorb.colorModes.length;
             astorb.applyColorMode();
             astorb.refreshRenderColorControls();
@@ -1446,7 +1717,7 @@ astorb.setupRenderColorControls = function()
     astorb.refreshRenderColorControls();
 };
 
-astorb.applyPointSize = function()
+astorb.applyPointSize = function ()
 {
     var gl = astorb.gl;
     if (!gl || astorb.pointSizeUniform === null)
@@ -1457,13 +1728,14 @@ astorb.applyPointSize = function()
     gl.uniform1f(astorb.pointSizeUniform, astorb.pointSize);
 };
 
-astorb.setupPointSizeControls = function()
+astorb.setupPointSizeControls = function ()
 {
-    var pointButton = document.getElementById('pointSizeButton');
+    var pointButton = document.getElementById("pointSizeButton");
 
     if (pointButton)
     {
-        pointButton.addEventListener('click', function() {
+        pointButton.addEventListener("click", function ()
+        {
             astorb.pointSizeIndex = (astorb.pointSizeIndex + 1) % astorb.pointSizes.length;
             astorb.pointSize = astorb.pointSizes[astorb.pointSizeIndex];
             astorb.applyPointSize();
@@ -1475,17 +1747,21 @@ astorb.setupPointSizeControls = function()
     astorb.refreshPointSizeControls();
 };
 
-astorb.setupOrbitLabelControls = function()
+astorb.setupOrbitLabelControls = function ()
 {
-    var labelButton = document.getElementById('orbitLabelButton');
+    var labelButton = document.getElementById("orbitLabelButton");
 
     if (labelButton)
     {
-        labelButton.addEventListener('click', function() {
+        labelButton.addEventListener("click", function ()
+        {
             astorb.showOrbitLabels = !astorb.showOrbitLabels;
-            if (typeof astorb.log === 'function')
+            if (typeof astorb.log === "function")
             {
-                astorb.log("Orbit labels " + (astorb.showOrbitLabels ? "enabled" : "disabled"), "blue");
+                astorb.log(
+                    "Orbit labels " + (astorb.showOrbitLabels ? "enabled" : "disabled"),
+                    "blue"
+                );
             }
             astorb.refreshOrbitLabelControls();
         });
@@ -1494,71 +1770,72 @@ astorb.setupOrbitLabelControls = function()
     astorb.refreshOrbitLabelControls();
 };
 
-astorb.applyTheme = function()
+astorb.applyTheme = function ()
 {
     var body = document.body;
     if (!body) return;
 
     if (astorb.isDarkTheme)
     {
-        body.classList.add('dark-theme');
+        body.classList.add("dark-theme");
     }
     else
     {
-        body.classList.remove('dark-theme');
+        body.classList.remove("dark-theme");
     }
 
-    var themeButton = document.getElementById('themeToggleButton');
+    var themeButton = document.getElementById("themeToggleButton");
     if (themeButton)
     {
         themeButton.textContent = "Theme: " + (astorb.isDarkTheme ? "Dark" : "Light");
     }
 };
 
-astorb.setupThemeControls = function()
+astorb.setupThemeControls = function ()
 {
-    var themeButton = document.getElementById('themeToggleButton');
+    var themeButton = document.getElementById("themeToggleButton");
     if (!themeButton) return;
 
-    var storedTheme = localStorage.getItem('astorb-theme');
+    var storedTheme = localStorage.getItem("astorb-theme");
     if (storedTheme)
     {
-        astorb.isDarkTheme = storedTheme === 'dark';
+        astorb.isDarkTheme = storedTheme === "dark";
     }
     else if (window.matchMedia)
     {
-        astorb.isDarkTheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        astorb.isDarkTheme = window.matchMedia("(prefers-color-scheme: dark)").matches;
     }
 
-    themeButton.addEventListener('click', function() {
+    themeButton.addEventListener("click", function ()
+    {
         astorb.isDarkTheme = !astorb.isDarkTheme;
         astorb.applyTheme();
-        localStorage.setItem('astorb-theme', astorb.isDarkTheme ? 'dark' : 'light');
+        localStorage.setItem("astorb-theme", astorb.isDarkTheme ? "dark" : "light");
     });
 
     astorb.applyTheme();
 };
 
 astorb.stats = null;
-astorb.initStats = function()
+astorb.initStats = function ()
 {
-    if (typeof Stats === 'undefined') return;
+    if (typeof Stats === "undefined") return;
 
     var stats = new Stats();
     stats.showPanel(0);
-    stats.dom.style.position = 'fixed';
-    stats.dom.style.top = '0';
-    stats.dom.style.right = '0';
-    stats.dom.style.left = 'auto';
+    stats.dom.style.position = "fixed";
+    stats.dom.style.top = "0";
+    stats.dom.style.right = "0";
+    stats.dom.style.left = "auto";
     document.body.appendChild(stats.dom);
     astorb.stats = stats;
 };
 
-astorb.refreshTimeControls = function()
+astorb.refreshTimeControls = function ()
 {
-    var pauseButton = document.getElementById('pauseButton');
-    var timeScaleLabel = document.getElementById('timeScaleLabel');
-    var invertButton = document.getElementById('invertTimeButton');
+    var pauseButton = document.getElementById("pauseButton");
+    var timeScaleLabel = document.getElementById("timeScaleLabel");
+    var invertButton = document.getElementById("invertTimeButton");
     var timeScale = astorb.time.timeScale;
     var directionLabel = timeScale >= 0 ? "Forward" : "Reverse";
     var magnitude = Math.abs(timeScale);
@@ -1570,7 +1847,8 @@ astorb.refreshTimeControls = function()
 
     if (timeScaleLabel)
     {
-        timeScaleLabel.textContent = "Speed: " + magnitude.toExponential(1) + "x (" + directionLabel + ")";
+        timeScaleLabel.textContent =
+            "Speed: " + magnitude.toExponential(1) + "x (" + directionLabel + ")";
     }
 
     if (invertButton)
@@ -1579,11 +1857,11 @@ astorb.refreshTimeControls = function()
     }
 };
 
-astorb.refreshAsteroidControls = function()
+astorb.refreshAsteroidControls = function ()
 {
-    var halfButton = document.getElementById('asteroidHalfButton');
-    var doubleButton = document.getElementById('asteroidDoubleButton');
-    var asteroidCountLabel = document.getElementById('asteroidCountLabel');
+    var halfButton = document.getElementById("asteroidHalfButton");
+    var doubleButton = document.getElementById("asteroidDoubleButton");
+    var asteroidCountLabel = document.getElementById("asteroidCountLabel");
     var total = astorb.asteroidCount || 0;
     var current = astorb.asteroidDrawCount || 0;
 
@@ -1592,8 +1870,14 @@ astorb.refreshAsteroidControls = function()
         if (total)
         {
             var percent = astorb.formatAsteroidPercent(current, total);
-            asteroidCountLabel.textContent = "Asteroids: " + astorb.formatNumber(current) + " / " +
-                astorb.formatNumber(total) + " (" + percent + ")";
+            asteroidCountLabel.textContent =
+                "Asteroids: " +
+                astorb.formatNumber(current) +
+                " / " +
+                astorb.formatNumber(total) +
+                " (" +
+                percent +
+                ")";
         }
         else
         {
@@ -1612,9 +1896,9 @@ astorb.refreshAsteroidControls = function()
     }
 };
 
-astorb.refreshDepthBufferControls = function()
+astorb.refreshDepthBufferControls = function ()
 {
-    var depthButton = document.getElementById('depthBufferButton');
+    var depthButton = document.getElementById("depthBufferButton");
 
     if (depthButton)
     {
@@ -1622,9 +1906,9 @@ astorb.refreshDepthBufferControls = function()
     }
 };
 
-astorb.refreshMotionBlurControls = function()
+astorb.refreshMotionBlurControls = function ()
 {
-    var motionBlurButton = document.getElementById('motionBlurButton');
+    var motionBlurButton = document.getElementById("motionBlurButton");
 
     if (motionBlurButton)
     {
@@ -1632,9 +1916,9 @@ astorb.refreshMotionBlurControls = function()
     }
 };
 
-astorb.refreshRenderColorControls = function()
+astorb.refreshRenderColorControls = function ()
 {
-    var renderButton = document.getElementById('renderColorButton');
+    var renderButton = document.getElementById("renderColorButton");
 
     if (renderButton)
     {
@@ -1643,9 +1927,9 @@ astorb.refreshRenderColorControls = function()
     }
 };
 
-astorb.refreshPointSizeControls = function()
+astorb.refreshPointSizeControls = function ()
 {
-    var pointButton = document.getElementById('pointSizeButton');
+    var pointButton = document.getElementById("pointSizeButton");
 
     if (pointButton)
     {
@@ -1653,9 +1937,9 @@ astorb.refreshPointSizeControls = function()
     }
 };
 
-astorb.refreshOrbitLabelControls = function()
+astorb.refreshOrbitLabelControls = function ()
 {
-    var labelButton = document.getElementById('orbitLabelButton');
+    var labelButton = document.getElementById("orbitLabelButton");
     var labelLayer = astorb.labelLayer;
 
     if (labelButton)
@@ -1677,7 +1961,7 @@ astorb.refreshOrbitLabelControls = function()
     }
 };
 
-astorb.updateViewMatrix = function()
+astorb.updateViewMatrix = function ()
 {
     var gl = astorb.gl;
     var camera = astorb.camera;
@@ -1689,7 +1973,7 @@ astorb.updateViewMatrix = function()
     // distance = AU from camera to origin
 
     // Clamp elevation to +/-80 degrees.
-    var maxElev = camera.maxElevationRadians || (80.0 * Math.PI / 180.0);
+    var maxElev = camera.maxElevationRadians || (80.0 * Math.PI) / 180.0;
     camera.elevation = Math.max(-maxElev, Math.min(maxElev, camera.elevation));
 
     // Wrap azimuth for numeric stability (keep it from growing unbounded).
@@ -1712,12 +1996,12 @@ astorb.updateViewMatrix = function()
     var cosAzi = Math.cos(azimuth);
 
     var eye = vec3.fromValues(
-        r * cosElev * sinAzi,   // X
-        r * cosElev * cosAzi,   // Y
-        r * sinElev             // Z (up)
+        r * cosElev * sinAzi, // X
+        r * cosElev * cosAzi, // Y
+        r * sinElev // Z (up)
     );
     var center = vec3.fromValues(0.0, 0.0, 0.0);
-    var up = vec3.fromValues(0.0, 0.0, 1.0);  // Z is up
+    var up = vec3.fromValues(0.0, 0.0, 1.0); // Z is up
 
     // Build a lookAt matrix.
     var f = vec3.create();
@@ -1773,7 +2057,7 @@ astorb.updateViewMatrix = function()
     }
 };
 
-astorb.animate = function(timestamp)
+astorb.animate = function (timestamp)
 {
     var gl = astorb.gl;
     var asteroidCount = astorb.asteroidCount;
@@ -1791,15 +2075,17 @@ astorb.animate = function(timestamp)
     astorb.resizeWebGL();
 
     // Calculate delta time
-    if (time.lastTimestamp === 0) {
+    if (time.lastTimestamp === 0)
+    {
         time.lastTimestamp = timestamp;
     }
-    var deltaTime = (timestamp - time.lastTimestamp) / 1000.0;  // Convert to seconds
+    var deltaTime = (timestamp - time.lastTimestamp) / 1000.0; // Convert to seconds
     time.lastTimestamp = timestamp;
     var simDelta = 0;
 
     // Update simulation time if not paused
-    if (!time.paused) {
+    if (!time.paused)
+    {
         simDelta = deltaTime * time.timeScale;
         time.simTime += simDelta;
     }
@@ -1815,17 +2101,32 @@ astorb.animate = function(timestamp)
 
     // Update status display
     astorb.frameCount++;
-    if (astorb.frameCount % 10 === 0) {
-        var statusDiv = document.getElementById('statusDisplay');
-        if (statusDiv) {
-            var years = time.simTime / (365.25 * 24 * 3600);  // Convert seconds to years
+    if (astorb.frameCount % 10 === 0)
+    {
+        var statusDiv = document.getElementById("statusDisplay");
+        if (statusDiv)
+        {
+            var years = time.simTime / (365.25 * 24 * 3600); // Convert seconds to years
             var pauseStatus = time.paused ? "[PAUSED]" : "[RUNNING]";
             var directionLabel = time.timeScale >= 0 ? "Forward" : "Reverse";
             var percent = astorb.formatAsteroidPercent(asteroidDrawCount, asteroidCount);
-            statusDiv.innerHTML = pauseStatus + " Time: " + years.toFixed(2) + " years | " +
-                "Asteroids: " + astorb.formatNumber(asteroidDrawCount) + " / " + astorb.formatNumber(asteroidCount) +
-                " (" + percent + ") | " +
-                "Speed: " + Math.abs(time.timeScale).toExponential(1) + "x (" + directionLabel + ")";
+            statusDiv.innerHTML =
+                pauseStatus +
+                " Time: " +
+                years.toFixed(2) +
+                " years | " +
+                "Asteroids: " +
+                astorb.formatNumber(asteroidDrawCount) +
+                " / " +
+                astorb.formatNumber(asteroidCount) +
+                " (" +
+                percent +
+                ") | " +
+                "Speed: " +
+                Math.abs(time.timeScale).toExponential(1) +
+                "x (" +
+                directionLabel +
+                ")";
         }
     }
 
@@ -1865,7 +2166,11 @@ astorb.animate = function(timestamp)
             gl.uniform1f(astorb.opacityUniform, 0.9);
         }
 
-        for (var dwarfOrbitIndex = 0; dwarfOrbitIndex < astorb.dwarfPlanetOrbitOffsets.length; dwarfOrbitIndex++)
+        for (
+            var dwarfOrbitIndex = 0;
+            dwarfOrbitIndex < astorb.dwarfPlanetOrbitOffsets.length;
+            dwarfOrbitIndex++
+        )
         {
             var dwarfOrbit = astorb.dwarfPlanetOrbitOffsets[dwarfOrbitIndex];
             gl.drawArrays(gl.LINE_STRIP, dwarfOrbit.start, dwarfOrbit.count);
@@ -1901,7 +2206,10 @@ astorb.animate = function(timestamp)
     var blurSpan = 0;
     if (motionBlur.enabled && blurSamples > 1)
     {
-        blurSpan = Math.min(motionBlur.maxSpanSeconds, Math.abs(simDelta) * motionBlur.spanMultiplier);
+        blurSpan = Math.min(
+            motionBlur.maxSpanSeconds,
+            Math.abs(simDelta) * motionBlur.spanMultiplier
+        );
     }
     if (blurSpan === 0)
     {
@@ -1910,10 +2218,10 @@ astorb.animate = function(timestamp)
     var blurActive = motionBlur.enabled && blurSamples > 1;
     for (var sampleIndex = 0; sampleIndex < blurSamples; sampleIndex++)
     {
-        var sampleBlend = blurSamples > 1 ? (sampleIndex / (blurSamples - 1)) : 0;
-        var sampleTime = time.simTime - (blurSpan * sampleBlend);
-        var weight = blurActive ? (1.0 - sampleBlend) : 1.0;
-        var opacity = blurActive ? (motionBlur.opacity * weight) : 1.0;
+        var sampleBlend = blurSamples > 1 ? sampleIndex / (blurSamples - 1) : 0;
+        var sampleTime = time.simTime - blurSpan * sampleBlend;
+        var weight = blurActive ? 1.0 - sampleBlend : 1.0;
+        var opacity = blurActive ? motionBlur.opacity * weight : 1.0;
 
         gl.uniform1f(astorb.timeUniform, sampleTime);
         if (astorb.opacityUniform !== null)
@@ -1927,7 +2235,7 @@ astorb.animate = function(timestamp)
     {
         astorb.firstFrameRendered = true;
         window.__astorbFirstFrameRendered = true;
-        document.dispatchEvent(new CustomEvent('astorb:first-frame'));
+        document.dispatchEvent(new CustomEvent("astorb:first-frame"));
     }
 
     if (stats)

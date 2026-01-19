@@ -1,19 +1,28 @@
 {
-  "name": "astorb3d",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "screenshot": "node tools/capture-screenshot.js",
-    "generate-qr": "node tools/generate-qr.js"
-  },
-  "private": true,
-  "dependencies": {
-    "minimist": "^1.2.8",
-    "qrcode": "^1.5.4"
-  },
-  "devDependencies": {
-    "playwright": "^1.49.1"
-  }
+    "name": "astorb3d",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "screenshot": "node tools/capture-screenshot.js",
+        "lint": "eslint .",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "generate-qr": "node tools/generate-qr.js"
+    },
+    "private": true,
+    "dependencies": {
+        "minimist": "^1.2.8",
+        "qrcode": "^1.5.4"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.39.2",
+        "eslint": "^9.39.2",
+        "eslint-config-prettier": "^10.1.8",
+        "globals": "^17.0.0",
+        "playwright": "^1.49.1",
+        "prettier": "^3.7.4",
+        "prettier-plugin-brace-style": "^0.8.2"
+    }
 }

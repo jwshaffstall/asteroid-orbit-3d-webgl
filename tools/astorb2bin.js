@@ -6,7 +6,7 @@
 var fileSystem = require("fs");
 var readline = require("readline");
 var buffer = require("buffer");
-var stream = require('stream');
+// var stream = require("stream");
 var assert = require("assert");
 var astorb_line = require("./astorb_line.js");
 
@@ -29,11 +29,11 @@ var args = minimist(process.argv.slice(2), {
     alias: {
         i: "input",
         o: "output",
-        h: "help"
+        h: "help",
     },
     string: ["input", "output"],
     boolean: ["help"],
-    unknown: function(arg)
+    unknown: function (arg)
     {
         // Allow positional args (minimist puts them in _) but reject unknown flags.
         if (arg && arg[0] === "-")
@@ -43,7 +43,7 @@ var args = minimist(process.argv.slice(2), {
             return false;
         }
         return true;
-    }
+    },
 });
 
 if (args.help)
@@ -61,7 +61,7 @@ var inputFilePath = args.input;
 var outputFilePath = args.output;
 
 assert(inputFilePath, "invalid input path");
-assert(outputFilePath, "invalid output path")
+assert(outputFilePath, "invalid output path");
 
 if (!fileSystem.existsSync(inputFilePath))
 {
@@ -80,7 +80,7 @@ if (!inputFileStats.isFile())
 
 console.dir(inputFileStats);
 var inputFileSize = inputFileStats.size;
-console.log("input file size = %d MB", (inputFileSize / (1024.0 * 1024.0)).toFixed(2) );
+console.log("input file size = %d MB", (inputFileSize / (1024.0 * 1024.0)).toFixed(2));
 
 var inputFileStream = fileSystem.createReadStream(inputFilePath);
 var outputFileStream = process.stdout;
@@ -89,7 +89,7 @@ var astorbLines = readline.createInterface(inputFileStream, outputFileStream);
 var asteroids = [];
 var totalEccentricity = 0.0;
 
-astorbLines.on("line", function(line)
+astorbLines.on("line", function (line)
 {
     var asteroid = astorb_line.parse(line);
     if (asteroid)
@@ -126,7 +126,7 @@ function writeAsteroidsBinaryFile(filePath, asteroids)
         asteroidBuffer.writeFloatLE(asteroid.semimajorAxis, byteOffset + 20);
     }
 
-    fileSystem.writeFile(filePath, asteroidBuffer, function(error)
+    fileSystem.writeFile(filePath, asteroidBuffer, function (error)
     {
         if (error)
         {
@@ -139,7 +139,7 @@ function writeAsteroidsBinaryFile(filePath, asteroids)
     });
 }
 
-astorbLines.on("close", function()
+astorbLines.on("close", function ()
 {
     var asteroidCount = asteroids.length;
     console.log("asteroid count = %d", asteroidCount);

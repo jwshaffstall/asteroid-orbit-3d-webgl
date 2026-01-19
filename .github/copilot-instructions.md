@@ -1,9 +1,11 @@
 # Copilot Instructions for asteroid-orbit-3d-webgl
 
 ## Project Overview
+
 This is a 3D WebGL visualization project that renders asteroid orbital elements from the Asteroid Orbital Elements Database (astorb.dat). The application runs entirely in the browser using WebGL for rendering and JavaScript for orbital mechanics calculations.
 
 ## Technology Stack
+
 - **Frontend**: Pure JavaScript (ES5/ES6), WebGL, HTML5 Canvas
 - **Graphics**: WebGL with GLSL shaders (vertex and fragment shaders)
 - **Math Library**: gl-matrix library for matrix operations
@@ -13,6 +15,7 @@ This is a 3D WebGL visualization project that renders asteroid orbital elements 
 ## JavaScript Coding Standards
 
 ### Code Style
+
 - Use consistent indentation (4 spaces observed in the codebase)
 - Use descriptive variable names (e.g., `semimajorAxis`, `eccentricity`, `inclination`)
 - Prefer explicit braces for all control structures
@@ -20,36 +23,40 @@ This is a 3D WebGL visualization project that renders asteroid orbital elements 
 - Use namespace pattern: `var astorb = astorb || {};` to avoid global pollution
 
 ### Naming Conventions
+
 - **Variables and functions**: camelCase (e.g., `formatNumber`, `updateLoadingOverlay`)
 - **Constants**: camelCase for shader constants (e.g., `pi`, `muSun`, `jupiterSemimajorAxis`)
 - **DOM element IDs**: camelCase (e.g., `astorb3dCanvas`, `loadingOverlay`)
 - **File names**: kebab-case for tools (e.g., `astorb2bin.js`, `generate-qr.js`)
 
 ### Function Conventions
+
 - Always validate inputs and handle null/undefined gracefully
 - Return fallback values (e.g., "--") for invalid or missing data
 - Use early returns for error conditions
 - Keep functions focused on a single responsibility
 
 ### Example Patterns
+
 ```javascript
 // Good: Defensive programming with fallbacks
-astorb.formatNumber = function(value)
-{
-    if (value === null || value === undefined)
-    {
+astorb.formatNumber = function (value) {
+    if (value === null || value === undefined) {
         return "--";
     }
-    return Number(value).toLocaleString('en-US');
+    return Number(value).toLocaleString("en-US");
 };
 
 // Good: Namespace pattern
 var astorb = astorb || {};
 
 // Good: IIFE for browser compatibility
-(function() {
-    var requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
-        window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
+(function () {
+    var requestAnimationFrame =
+        window.requestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.msRequestAnimationFrame;
     window.requestAnimationFrame = requestAnimationFrame;
 })();
 ```
@@ -57,6 +64,7 @@ var astorb = astorb || {};
 ## WebGL and Graphics Programming
 
 ### GLSL Shader Guidelines
+
 - Use `precision mediump float` for most shaders (or `lowp` for less critical calculations)
 - Declare all uniforms and attributes explicitly at the top of shaders
 - Use descriptive names with prefixes: `a` for attributes, `u` for uniforms, `v` for varyings
@@ -65,6 +73,7 @@ var astorb = astorb || {};
 - Clamp values to prevent undefined behavior: `clamp(value, min, max)`
 
 ### WebGL Best Practices
+
 - Always check for null/undefined when accessing WebGL resources
 - Use `gl.getParameter(gl.MAX_VERTEX_ATTRIBS)` and similar to respect hardware limits
 - Clean up WebGL resources properly (delete buffers, textures, shaders when done)
@@ -72,6 +81,7 @@ var astorb = astorb || {};
 - Use point sprites (`gl.POINTS`) for efficient particle rendering
 
 ### Astronomical Calculations
+
 - Follow established orbital mechanics formulas (Kepler's equations)
 - Use consistent units: Astronomical Units (AU) for distance, radians for angles, seconds for time
 - Document the physical meaning of constants with inline comments (e.g., `const float muSun = 3.96401599E-14; // AU^3/s^2`)
@@ -81,6 +91,7 @@ var astorb = astorb || {};
 ## HTML and CSS Standards
 
 ### CSS Organization
+
 - Use CSS custom properties (variables) for theming: `--page-bg`, `--button-text`, etc.
 - Support both light and dark themes with separate color schemes
 - Use flexbox for responsive layouts
@@ -88,6 +99,7 @@ var astorb = astorb || {};
 - Support safe areas for mobile devices: `env(safe-area-inset-top)`
 
 ### Accessibility
+
 - Include proper ARIA labels: `aria-label`, `aria-hidden`
 - Use semantic HTML elements
 - Ensure keyboard navigation with `tabindex` where appropriate
@@ -97,6 +109,7 @@ var astorb = astorb || {};
 ## Node.js Tooling
 
 ### Command-Line Tools
+
 - Use `minimist` for argument parsing with clear aliases
 - Provide helpful usage messages with `--help` flag
 - Follow Unix exit code conventions: 0 for success, non-zero for errors
@@ -104,6 +117,7 @@ var astorb = astorb || {};
 - Use `console.error()` for error messages, `console.log()` for standard output
 
 ### Scripts in package.json
+
 - Keep scripts simple and focused
 - Use descriptive script names that indicate purpose
 - Current scripts: `screenshot`, `generate-qr` (for tooling)
@@ -111,12 +125,14 @@ var astorb = astorb || {};
 ## Security and Best Practices
 
 ### General Security
+
 - Never commit secrets or API keys
 - Validate and sanitize all external data (especially from astorb.dat file)
 - Use defensive programming practices (bounds checking, null checks)
 - Handle errors gracefully without exposing internal details
 
 ### Performance
+
 - Use efficient WebGL rendering techniques (minimize state changes)
 - Batch similar operations together
 - Use appropriate precision (`mediump` over `highp` when sufficient)
@@ -124,6 +140,7 @@ var astorb = astorb || {};
 - Consider memory usage for large datasets (asteroid database)
 
 ### Browser Compatibility
+
 - Test across major browsers (Chrome, Firefox, Safari, Edge)
 - Provide fallbacks for older API implementations
 - Use feature detection over browser detection
@@ -132,6 +149,7 @@ var astorb = astorb || {};
 ## Testing and Development
 
 ### Manual Testing
+
 - Test with different asteroid counts (half, double buttons)
 - Verify all color modes work correctly
 - Test all control buttons (pause, time controls, theme toggle)
@@ -139,6 +157,7 @@ var astorb = astorb || {};
 - Verify loading overlay behavior
 
 ### Code Changes
+
 - Make minimal, focused changes
 - Test changes in the browser before committing
 - Verify WebGL rendering still works correctly
@@ -148,6 +167,7 @@ var astorb = astorb || {};
 ## Documentation
 
 ### Code Comments
+
 - Comment complex mathematical operations and algorithms
 - Explain non-obvious WebGL state or shader behavior
 - Document physical constants with units
@@ -155,11 +175,13 @@ var astorb = astorb || {};
 - Update comments when code changes
 
 ### Inline Documentation
+
 - Use JSDoc-style comments for public API functions
 - Document function parameters and return values
 - Include examples for non-obvious usage patterns
 
 ## File Organization
+
 - `astorb3d.html` - Main application HTML
 - `scripts/js/astorb3d.js` - Core WebGL and orbital mechanics logic
 - `scripts/js/libs/` - Third-party libraries
@@ -169,6 +191,7 @@ var astorb = astorb || {};
 - `astorb/` - Orbital data files
 
 ## Important Notes
+
 - This is a single-page application with no build step for the main app
 - All calculations happen in real-time on the GPU via shaders
 - The application handles large datasets (~1M asteroids) efficiently
