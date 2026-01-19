@@ -271,6 +271,7 @@
     <button id="depthBufferButton" type="button">Depth: --</button>
     <button id="motionBlurButton" type="button">Motion Blur: --</button>
     <button id="renderColorButton" type="button">Color: --</button>
+    <button id="pointSizeButton" type="button">Point Size: 2px</button>
     <button id="orbitLabelButton" type="button">Labels: Off</button>
     <button id="themeToggleButton" type="button">Theme: Light</button>
     <span id="timeScaleLabel">Speed: --</span>
@@ -313,6 +314,7 @@
     uniform mat4 uMVMatrix;
     uniform mat4 uPMatrix;
     uniform float time; // seconds
+    uniform float uPointSize;
 
     varying float x;
     varying float y;
@@ -397,7 +399,7 @@
         vInclination = inclination;
         vMeanMotion = n;
         vSemimajorAxis = semimajorAxis;
-        gl_PointSize = 2.0;
+        gl_PointSize = uPointSize;
     }
 </script>
 <script type="x-shader/x-fragment" id="shader-fs">
