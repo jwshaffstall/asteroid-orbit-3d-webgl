@@ -331,7 +331,9 @@
                 const float standardGravitationalParameterSun = 3.96401599E-14; // AU^3/s^2
                 const float muSun = standardGravitationalParameterSun;
 
-                float n = sqrt(muSun / pow(a, 3.0));
+                float a2 = a * a;
+                float a3 = a2 * a;
+                float n = sqrt(muSun / a3);
 
                 // Jupiter resonance adjustments for Trojans/Greeks (1:1) and Hildas (3:2)
                 const float jupiterSemimajorAxis = 5.2044;
@@ -359,19 +361,31 @@
                 M = mod(M + trojanLibration + hildaLibration, two_pi);
 
                 float E = M;  // Initialize E with mean anomaly for better convergence
-                const int iterationCount = 30;
+                const int iterationCount = 10;
                 for (int iteration = 0; iteration < iterationCount; iteration++)
                 {
-                    E = E - (E - e*sin(E) - M)/(1.0 - e*cos(E));
+                    float sinE = sin(E);
+                    float cosE = cos(E);
+                    E = E - (E - e * sinE - M) / (1.0 - e * cosE);
                 }
-                float r = a * (1.0 - e*cos(E));
-                float nu = 2.0 * atan(sqrt((1.0 + e)/(1.0 - e)) * tan(E/2.0));
+                float sinE = sin(E);
+                float cosE = cos(E);
+                float r = a * (1.0 - e * cosE);
+                float sqrtOneMinusESq = sqrt(max(0.0, 1.0 - e * e));
+                float nu = atan(sqrtOneMinusESq * sinE, cosE - e);
 
                 float theta = omega + nu;
 
-                x = r * (cos(sigma)*cos(theta) - sin(sigma)*sin(theta)*cos(i));
-                y = r * (sin(sigma)*cos(theta) + cos(sigma)*sin(theta)*cos(i));
-                z = r * (sin(i)*sin(theta));
+                float sinSigma = sin(sigma);
+                float cosSigma = cos(sigma);
+                float sinTheta = sin(theta);
+                float cosTheta = cos(theta);
+                float sinI = sin(i);
+                float cosI = cos(i);
+
+                x = r * (cosSigma * cosTheta - sinSigma * sinTheta * cosI);
+                y = r * (sinSigma * cosTheta + cosSigma * sinTheta * cosI);
+                z = r * (sinI * sinTheta);
 
                 vec4 mvPosition = uMVMatrix * vec4(x, y, z, 1.0);
                 gl_Position = uPMatrix * mvPosition;
