@@ -293,6 +293,7 @@ astorb.onLoadBody = function ()
                 }
 
                 astorb.setupTimeControls();
+                astorb.setupControlPanelToggle();
                 astorb.setupAsteroidControls();
                 astorb.setupDepthBufferControls();
                 astorb.setupMotionBlurControls();
@@ -580,6 +581,7 @@ astorb.onLoadAstorbData = function (errorCode, response)
         var asteroidCount = astorbFloatCount / floatsPerAsteroid;
         astorb.log("asteroid count = " + asteroidCount, "black");
         astorb.asteroidCount = asteroidCount;
+        astorb.asteroidDrawStride = 1;
         astorb.asteroidDrawCount = asteroidCount;
         astorb.refreshAsteroidControls();
 
@@ -609,7 +611,7 @@ astorb.onLoadAstorbData = function (errorCode, response)
         gl.bufferData(gl.ARRAY_BUFFER, astorbFloats, gl.STATIC_DRAW);
         astorb.astorbBuffer = astorbBuffer;
 
-        astorb.configureAttributePointers(gl);
+        astorb.configureAttributePointers(gl, 1);
 
         astorb.frameCount = 0;
         requestAnimationFrame(astorb.animate);
@@ -674,6 +676,7 @@ astorb.firstFrameRendered = false;
 window.__astorbDataLoaded = false;
 window.__astorbFirstFrameRendered = false;
 astorb.asteroidDrawCount = 0;
+astorb.asteroidDrawStride = 1;
 
 astorb.initBuffers = function (gl)
 {
@@ -744,12 +747,14 @@ astorb.initBuffers = function (gl)
     astorb.updateViewMatrix();
 };
 
-astorb.configureAttributePointers = function (gl)
+astorb.configureAttributePointers = function (gl, strideMultiplier)
 {
     // Each asteroid uses 6 floats: M, w, Ω, i, e, a (matching shader attributes).
     var bytesPerFloat = 4;
     var floatsPerVertex = 6;
-    var floatStride = floatsPerVertex * bytesPerFloat;
+    var strideFactor = strideMultiplier || 1;
+    var baseStride = floatsPerVertex * bytesPerFloat;
+    var floatStride = baseStride * strideFactor;
     astorb.attributeStride = floatStride;
 
     if (astorb.aMeanAnomaly >= 0)
@@ -1599,10 +1604,70 @@ astorb.setupTimeControls = function ()
     astorb.refreshTimeControls();
 };
 
+astorb.setupControlPanelToggle = function ()
+{
+    var panel = document.getElementById("controlPanel");
+    var toggleButton = document.getElementById("controlPanelToggle");
+    if (!panel || !toggleButton)
+    {
+        return;
+    }
+
+    var mediaQuery = window.matchMedia("(max-width: 640px)");
+
+    var applyCollapsedState = function (collapsed)
+    {
+        astorb.controlPanelCollapsed = collapsed;
+        panel.classList.toggle("collapsed", collapsed);
+        toggleButton.textContent = "Controls: " + (collapsed ? "Show" : "Hide");
+        toggleButton.setAttribute("aria-expanded", (!collapsed).toString());
+    };
+
+    var refreshForViewport = function ()
+    {
+        if (!mediaQuery.matches)
+        {
+            applyCollapsedState(false);
+            return;
+        }
+
+        if (typeof astorb.controlPanelCollapsed !== "boolean")
+        {
+            applyCollapsedState(true);
+            return;
+        }
+
+        applyCollapsedState(astorb.controlPanelCollapsed);
+    };
+
+    toggleButton.addEventListener("click", function ()
+    {
+        applyCollapsedState(!astorb.controlPanelCollapsed);
+    });
+
+    if (mediaQuery.addEventListener)
+    {
+        mediaQuery.addEventListener("change", refreshForViewport);
+    }
+    else if (mediaQuery.addListener)
+    {
+        mediaQuery.addListener(refreshForViewport);
+    }
+
+    refreshForViewport();
+};
+
 astorb.setupAsteroidControls = function ()
 {
     var halfButton = document.getElementById("asteroidHalfButton");
     var doubleButton = document.getElementById("asteroidDoubleButton");
+
+    astorb.updateAsteroidDrawSettings = function ()
+    {
+        var total = astorb.asteroidCount || 0;
+        var stride = astorb.asteroidDrawStride || 1;
+        astorb.asteroidDrawCount = total ? Math.ceil(total / stride) : 0;
+    };
 
     if (halfButton)
     {
@@ -1610,9 +1675,11 @@ astorb.setupAsteroidControls = function ()
         {
             var total = astorb.asteroidCount || 0;
             if (!total) return;
-            var current = astorb.asteroidDrawCount || total;
-            var nextCount = Math.max(1, Math.floor(current / 2));
-            astorb.asteroidDrawCount = nextCount;
+            var stride = astorb.asteroidDrawStride || 1;
+            var nextStride = Math.min(total, stride * 2);
+            astorb.asteroidDrawStride = nextStride;
+            astorb.updateAsteroidDrawSettings();
+            var nextCount = astorb.asteroidDrawCount;
             astorb.log(
                 "Asteroid draw count: " +
                     astorb.formatNumber(nextCount) +
@@ -1630,9 +1697,11 @@ astorb.setupAsteroidControls = function ()
         {
             var total = astorb.asteroidCount || 0;
             if (!total) return;
-            var current = astorb.asteroidDrawCount || total;
-            var nextCount = Math.min(total, current * 2);
-            astorb.asteroidDrawCount = nextCount;
+            var stride = astorb.asteroidDrawStride || 1;
+            var nextStride = Math.max(1, Math.floor(stride / 2));
+            astorb.asteroidDrawStride = nextStride;
+            astorb.updateAsteroidDrawSettings();
+            var nextCount = astorb.asteroidDrawCount;
             astorb.log(
                 "Asteroid draw count: " +
                     astorb.formatNumber(nextCount) +
@@ -1644,6 +1713,7 @@ astorb.setupAsteroidControls = function ()
         });
     }
 
+    astorb.updateAsteroidDrawSettings();
     astorb.refreshAsteroidControls();
 };
 
@@ -2150,7 +2220,7 @@ astorb.animate = function (timestamp)
     {
         gl.useProgram(astorb.asteroidProgram);
         gl.bindBuffer(gl.ARRAY_BUFFER, astorb.planetOrbitBuffer);
-        astorb.configureAttributePointers(gl);
+        astorb.configureAttributePointers(gl, 1);
         gl.uniform1f(astorb.timeUniform, 0);
         if (astorb.opacityUniform !== null)
         {
@@ -2168,7 +2238,7 @@ astorb.animate = function (timestamp)
     {
         gl.useProgram(astorb.asteroidProgram);
         gl.bindBuffer(gl.ARRAY_BUFFER, astorb.dwarfPlanetOrbitBuffer);
-        astorb.configureAttributePointers(gl);
+        astorb.configureAttributePointers(gl, 1);
         gl.uniform1f(astorb.timeUniform, 0);
         if (astorb.opacityUniform !== null)
         {
@@ -2210,7 +2280,7 @@ astorb.animate = function (timestamp)
 
     gl.useProgram(astorb.asteroidProgram);
     gl.bindBuffer(gl.ARRAY_BUFFER, astorb.astorbBuffer);
-    astorb.configureAttributePointers(gl);
+    astorb.configureAttributePointers(gl, astorb.asteroidDrawStride || 1);
     var blurSamples = motionBlur.enabled ? motionBlur.sampleCount : 1;
     var blurSpan = 0;
     if (motionBlur.enabled && blurSamples > 1)
