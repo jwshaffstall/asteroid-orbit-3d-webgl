@@ -171,6 +171,27 @@
                 font-family: monospace;
                 flex: 0 0 auto;
             }
+            #controlPanel {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                flex: 0 0 auto;
+            }
+            #controlPanelToggle {
+                display: none;
+                align-self: flex-start;
+                background-color: var(--button-bg);
+                color: var(--button-text);
+                border: 1px solid var(--button-border);
+                border-radius: 6px;
+                padding: 6px 12px;
+                font-size: 13px;
+                cursor: pointer;
+            }
+            #controlPanelToggle:focus-visible {
+                outline: 2px solid #60a5fa;
+                outline-offset: 2px;
+            }
             #controlBar {
                 display: flex;
                 flex-wrap: wrap;
@@ -178,6 +199,7 @@
                 align-items: center;
                 padding: 6px 0;
                 flex: 0 0 auto;
+                transition: max-height 0.2s ease, opacity 0.2s ease;
             }
             #controlBar button {
                 background-color: var(--button-bg);
@@ -202,15 +224,26 @@
                 color: var(--panel-text);
             }
             @media (max-width: 640px) {
+                #controlPanelToggle {
+                    display: inline-flex;
+                }
                 #controlBar {
                     gap: 4px;
                     padding: 4px 0;
+                    max-height: 600px;
+                    opacity: 1;
+                    overflow: hidden;
                 }
                 #controlBar button {
                     flex: 1 1 96px;
                     font-size: 12px;
                     padding: 6px 8px;
                     min-width: 0;
+                }
+                #controlPanel.collapsed #controlBar {
+                    max-height: 0;
+                    opacity: 0;
+                    padding: 0;
                 }
             }
             #astorbLog {
@@ -236,21 +269,26 @@
     <body onload="astorb.onLoadBody()">
         <h1>astorb 3d</h1>
         <!-- Primary interaction controls for time, rendering, and UI toggles. -->
-        <div id="controlBar">
-            <button id="pauseButton" type="button">Pause</button>
-            <button id="slowButton" type="button">Slow Down</button>
-            <button id="fastButton" type="button">Speed Up</button>
-            <button id="resetTimeButton" type="button">Reset Time</button>
-            <button id="invertTimeButton" type="button">Direction: --</button>
-            <button id="asteroidHalfButton" type="button">Half Asteroids</button>
-            <button id="asteroidDoubleButton" type="button">Double Asteroids</button>
-            <button id="depthBufferButton" type="button">Depth: --</button>
-            <button id="motionBlurButton" type="button">Motion Blur: --</button>
-            <button id="renderColorButton" type="button">Color: --</button>
-            <button id="pointSizeButton" type="button">Point Size: 2px</button>
-            <button id="orbitLabelButton" type="button">Labels: Off</button>
-            <button id="themeToggleButton" type="button">Theme: Light</button>
-            <span id="timeScaleLabel">Speed: --</span>
+        <div id="controlPanel">
+            <button id="controlPanelToggle" type="button" aria-controls="controlBar">
+                Controls: Hide
+            </button>
+            <div id="controlBar">
+                <button id="pauseButton" type="button">Pause</button>
+                <button id="slowButton" type="button">Slow Down</button>
+                <button id="fastButton" type="button">Speed Up</button>
+                <button id="resetTimeButton" type="button">Reset Time</button>
+                <button id="invertTimeButton" type="button">Direction: --</button>
+                <button id="asteroidHalfButton" type="button">Half Asteroids</button>
+                <button id="asteroidDoubleButton" type="button">Double Asteroids</button>
+                <button id="depthBufferButton" type="button">Depth: --</button>
+                <button id="motionBlurButton" type="button">Motion Blur: --</button>
+                <button id="renderColorButton" type="button">Color: --</button>
+                <button id="pointSizeButton" type="button">Point Size: 2px</button>
+                <button id="orbitLabelButton" type="button">Labels: Off</button>
+                <button id="themeToggleButton" type="button">Theme: Light</button>
+                <span id="timeScaleLabel">Speed: --</span>
+            </div>
         </div>
         <!-- Canvas is the WebGL surface; overlays hold labels + loading UI. -->
         <div id="canvasContainer">
