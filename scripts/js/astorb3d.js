@@ -17,53 +17,35 @@
 var astorb = astorb || {};
 
 // UI formatting helpers for log output and status HUDs.
-astorb.formatNumber = function (value)
-{
-    if (value === null || value === undefined)
+astorb.utils = window.astorbUtils || {};
+astorb.formatNumber =
+    astorb.utils.formatNumber ||
+    function (value)
     {
-        return "--";
-    }
-    return Number(value).toLocaleString("en-US");
-};
-
-astorb.formatAsteroidPercent = function (current, total)
-{
-    if (!total)
+        return value === null || value === undefined ? "--" : String(value);
+    };
+astorb.formatAsteroidPercent =
+    astorb.utils.formatAsteroidPercent ||
+    function (current, total)
     {
-        return "0%";
-    }
-    var percent = (current / total) * 100;
-    return percent.toFixed(1) + "%";
-};
-
-astorb.formatBytes = function (bytes)
-{
-    if (bytes === null || bytes === undefined || isNaN(bytes))
+        if (!total)
+        {
+            return "0%";
+        }
+        return ((current / total) * 100).toFixed(1) + "%";
+    };
+astorb.formatBytes =
+    astorb.utils.formatBytes ||
+    function (bytes)
     {
-        return "--";
-    }
-    if (bytes === 0)
+        return String(bytes);
+    };
+astorb.formatBitsPerSecond =
+    astorb.utils.formatBitsPerSecond ||
+    function (value)
     {
-        return "0 B";
-    }
-    var units = ["B", "KB", "MB", "GB", "TB"];
-    var index = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
-    var value = bytes / Math.pow(1024, index);
-    return value.toFixed(value >= 10 || index === 0 ? 0 : 1) + " " + units[index];
-};
-
-astorb.formatBitsPerSecond = function (bitsPerSecond)
-{
-    if (!bitsPerSecond || !isFinite(bitsPerSecond))
-    {
-        return "--";
-    }
-    var units = ["bps", "Kbps", "Mbps", "Gbps"];
-    var index = Math.min(units.length - 1, Math.floor(Math.log(bitsPerSecond) / Math.log(1000)));
-    var value = bitsPerSecond / Math.pow(1000, index);
-    return value.toFixed(value >= 10 || index === 0 ? 0 : 1) + " " + units[index];
-};
-
+        return String(value);
+    };
 // Wire up the loading overlay progress ring and numeric readouts.
 astorb.initLoadingOverlay = function ()
 {
@@ -260,6 +242,11 @@ astorb.isDarkTheme = false;
 astorb.pointSizes = [1, 2, 3, 4];
 astorb.pointSizeIndex = 1;
 astorb.pointSize = astorb.pointSizes[astorb.pointSizeIndex];
+astorb.cinematicMode = {
+    enabled: false,
+    angularVelocity: 0.11,
+    zoomAmplitude: 0.08,
+};
 astorb.onLoadBody = function ()
 {
     var canvas = document.getElementById(astorb.canvasId);
@@ -301,6 +288,8 @@ astorb.onLoadBody = function ()
                 astorb.setupPointSizeControls();
                 astorb.setupOrbitLabelControls();
                 astorb.setupThemeControls();
+                astorb.setupCinematicControls();
+                astorb.setupSurpriseControls();
                 astorb.initStats();
                 astorb.loadAstorbData();
             }
@@ -554,10 +543,22 @@ astorb.Loader = function (path, inputCallback, inputProgressCallback)
         }
     };
 
+    request.timeout = 45000;
+
     request.onprogress = function (event)
     {
         var totalBytes = event.lengthComputable ? event.total : null;
         progressCallback(event.loaded, totalBytes);
+    };
+
+    request.onerror = function ()
+    {
+        callback(request.status || 0, null);
+    };
+
+    request.ontimeout = function ()
+    {
+        callback(408, null);
     };
 
     request.send();
@@ -1529,6 +1530,16 @@ astorb.setupCameraControls = function (canvas)
                 astorb.log("Time reset to 0", "blue");
                 event.preventDefault();
                 break;
+            case "c":
+            case "C":
+                astorb.toggleCinematicMode();
+                event.preventDefault();
+                break;
+            case "r":
+            case "R":
+                astorb.activateSurpriseMode();
+                event.preventDefault();
+                break;
         }
     };
 
@@ -1816,6 +1827,11 @@ astorb.setupPointSizeControls = function ()
         {
             astorb.pointSizeIndex = (astorb.pointSizeIndex + 1) % astorb.pointSizes.length;
             astorb.pointSize = astorb.pointSizes[astorb.pointSizeIndex];
+            astorb.cinematicMode = {
+                enabled: false,
+                angularVelocity: 0.11,
+                zoomAmplitude: 0.08,
+            };
             astorb.applyPointSize();
             astorb.refreshPointSizeControls();
         });
@@ -1892,6 +1908,69 @@ astorb.setupThemeControls = function ()
     });
 
     astorb.applyTheme();
+};
+
+astorb.toggleCinematicMode = function ()
+{
+    astorb.cinematicMode.enabled = !astorb.cinematicMode.enabled;
+    astorb.refreshCinematicControls();
+    astorb.log("Cinematic mode " + (astorb.cinematicMode.enabled ? "enabled" : "disabled"), "blue");
+};
+
+astorb.setupCinematicControls = function ()
+{
+    var cinematicButton = document.getElementById("cinematicModeButton");
+    if (!cinematicButton) return;
+
+    cinematicButton.addEventListener("click", function ()
+    {
+        astorb.toggleCinematicMode();
+    });
+
+    astorb.refreshCinematicControls();
+};
+
+astorb.refreshCinematicControls = function ()
+{
+    var cinematicButton = document.getElementById("cinematicModeButton");
+    if (cinematicButton)
+    {
+        cinematicButton.textContent = "Cinematic: " + (astorb.cinematicMode.enabled ? "On" : "Off");
+    }
+};
+
+astorb.activateSurpriseMode = function ()
+{
+    astorb.colorModeIndex = Math.floor(Math.random() * astorb.colorModes.length);
+    astorb.pointSizeIndex = Math.floor(Math.random() * astorb.pointSizes.length);
+    astorb.pointSize = astorb.pointSizes[astorb.pointSizeIndex];
+    astorb.showOrbitLabels = Math.random() > 0.5;
+    astorb.motionBlur.enabled = Math.random() > 0.5;
+    astorb.time.timeScale = (Math.random() > 0.25 ? 1 : -1) * (5e4 + Math.random() * 2.5e6);
+
+    astorb.applyColorMode();
+    astorb.applyPointSize();
+    astorb.refreshRenderColorControls();
+    astorb.refreshPointSizeControls();
+    astorb.refreshOrbitLabelControls();
+    astorb.refreshMotionBlurControls();
+    astorb.refreshTimeControls();
+
+    astorb.log(
+        "Surprise mode: randomized render style, motion blur, labels, and time speed.",
+        "green"
+    );
+};
+
+astorb.setupSurpriseControls = function ()
+{
+    var surpriseButton = document.getElementById("surpriseButton");
+    if (!surpriseButton) return;
+
+    surpriseButton.addEventListener("click", function ()
+    {
+        astorb.activateSurpriseMode();
+    });
 };
 
 astorb.stats = null;
@@ -2169,6 +2248,20 @@ astorb.animate = function (timestamp)
         time.simTime += simDelta;
     }
 
+    if (astorb.cinematicMode.enabled)
+    {
+        astorb.camera.azimuth += deltaTime * astorb.cinematicMode.angularVelocity;
+        var baseDistance = 12.0;
+        var zoomWave = Math.sin(timestamp * 0.0004) * astorb.cinematicMode.zoomAmplitude;
+        astorb.camera.distance = astorb.utils.clamp
+            ? astorb.utils.clamp(
+                  baseDistance * (1 + zoomWave),
+                  astorb.camera.minDistance,
+                  astorb.camera.maxDistance
+              )
+            : astorb.camera.distance;
+    }
+
     // Update time uniform
     gl.useProgram(astorb.asteroidProgram);
     gl.uniform1f(astorb.timeUniform, time.simTime);
@@ -2185,27 +2278,15 @@ astorb.animate = function (timestamp)
         var statusDiv = document.getElementById("statusDisplay");
         if (statusDiv)
         {
-            var years = time.simTime / (365.25 * 24 * 3600); // Convert seconds to years
-            var pauseStatus = time.paused ? "[PAUSED]" : "[RUNNING]";
-            var directionLabel = time.timeScale >= 0 ? "Forward" : "Reverse";
-            var percent = astorb.formatAsteroidPercent(asteroidDrawCount, asteroidCount);
-            statusDiv.innerHTML =
-                pauseStatus +
-                " Time: " +
-                years.toFixed(2) +
-                " years | " +
-                "Asteroids: " +
-                astorb.formatNumber(asteroidDrawCount) +
-                " / " +
-                astorb.formatNumber(asteroidCount) +
-                " (" +
-                percent +
-                ") | " +
-                "Speed: " +
-                Math.abs(time.timeScale).toExponential(1) +
-                "x (" +
-                directionLabel +
-                ")";
+            statusDiv.textContent = astorb.utils.buildStatusText
+                ? astorb.utils.buildStatusText({
+                      simTime: time.simTime,
+                      paused: time.paused,
+                      timeScale: time.timeScale,
+                      asteroidCount: asteroidCount,
+                      asteroidDrawCount: asteroidDrawCount,
+                  })
+                : "Status: Running";
         }
     }
 

@@ -199,7 +199,9 @@
                 align-items: center;
                 padding: 6px 0;
                 flex: 0 0 auto;
-                transition: max-height 0.2s ease, opacity 0.2s ease;
+                transition:
+                    max-height 0.2s ease,
+                    opacity 0.2s ease;
             }
             #controlBar button {
                 background-color: var(--button-bg);
@@ -264,6 +266,18 @@
             #astorbLog font[color="black"] {
                 color: var(--panel-text);
             }
+            #shortcutHelp {
+                flex: 0 0 auto;
+                font-size: 12px;
+                color: var(--panel-text);
+                background: var(--panel-bg);
+                border: 1px solid var(--button-border);
+                border-radius: 6px;
+                padding: 4px 8px;
+            }
+            #shortcutHelp p {
+                margin: 4px 0;
+            }
         </style>
     </head>
     <body onload="astorb.onLoadBody()">
@@ -287,6 +301,8 @@
                 <button id="pointSizeButton" type="button">Point Size: 2px</button>
                 <button id="orbitLabelButton" type="button">Labels: Off</button>
                 <button id="themeToggleButton" type="button">Theme: Light</button>
+                <button id="cinematicModeButton" type="button">Cinematic: Off</button>
+                <button id="surpriseButton" type="button">Surprise Me</button>
                 <span id="timeScaleLabel">Speed: --</span>
             </div>
         </div>
@@ -312,12 +328,18 @@
                 </div>
             </div>
         </div>
-        <div id="statusDisplay">Status: Loading...</div>
+        <div id="statusDisplay" role="status" aria-live="polite">Status: Loading...</div>
+        <details id="shortcutHelp">
+            <summary>Keyboard & touch help</summary>
+            <p>Space pause/resume · ↑/↓ speed · 0 reset · C toggle cinematic · R randomize vibe</p>
+            <p>Drag to orbit camera, scroll/pinch to zoom.</p>
+        </details>
         <div id="astorbLog"></div>
         <!-- <script src="scripts/js/libs/sylvester.src.js"></script> -->
         <!-- <script src="scripts/js/libs/glUtils.js"></script> -->
         <script src="scripts/js/libs/gl-matrix-min.js"></script>
         <script src="scripts/js/libs/stats.min.js"></script>
+        <script src="scripts/js/astorb-utils.js"></script>
         <script src="scripts/js/astorb3d.js"></script>
         <!-- GPU shader programs embedded in the page for easy inspection. -->
         <script type="x-shader/x-vertex" id="shader-vs">
