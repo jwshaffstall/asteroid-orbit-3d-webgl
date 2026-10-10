@@ -1,0 +1,28 @@
+{
+    "$schema": "./node_modules/oxlint/configuration_schema.json",
+    "plugins": ["unicorn", "oxc"],
+    "categories": {
+        "correctness": "error"
+    },
+    "rules": {
+        "no-unused-vars": "warn",
+        "no-console": "off"
+    },
+    "env": {
+        "builtin": true,
+        "browser": true,
+        "node": true
+    },
+    "globals": {
+        "mat4": "readonly",
+        "mat3": "readonly",
+        "vec3": "readonly",
+        "vec4": "readonly",
+        "quat": "readonly",
+        "Stats": "readonly",
+        "glMatrix": "readonly",
+        "astorb": "writable",
+        "astorbUtils": "writable"
+    },
+    "ignorePatterns": ["node_modules/**", "temp/**", "dist/**", "scripts/js/libs/**"]
+}

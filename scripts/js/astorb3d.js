@@ -252,7 +252,7 @@ astorb.onLoadBody = function ()
     var canvas = document.getElementById(astorb.canvasId);
     if (canvas)
     {
-        var gl = null;
+        var gl;
 
         try
         {
