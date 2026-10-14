@@ -12,7 +12,7 @@ function parse_line(line)
     var lineLength = line.length;
     if (lineLength != AstorbLineLength)
     {
-        console.log("astorb line is not 255 characters: %d", lineLength);
+        console.log("astorb line is not %d characters: %d", AstorbLineLength, lineLength);
     }
     else
     {

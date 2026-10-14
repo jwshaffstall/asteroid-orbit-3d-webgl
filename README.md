@@ -35,9 +35,28 @@ The runtime loads a binary file (`temp/astorb3d.bin`) containing Float32 orbital
 asteroid in the following order: mean anomaly, argument of perihelion, longitude of ascending
 node, inclination, eccentricity, and semimajor axis. The `scripts/python/astorb.py` helper
 documents the source field layout from the original `astorb.dat` file, while the WebGL app
-streamlines that data into GPU buffers for real-time animation.
+streams that data into GPU buffers for real-time animation.
 
-### Source Data
+### Source data
 
 The Asteroid Orbital Elements Database
 [https://asteroid.lowell.edu/astorb/](https://asteroid.lowell.edu/astorb/)
+
+- **Epoch**: the elements are osculating orbital elements at the 2013-10-15 epoch, so the
+  simulation starts from that date. The data is over a decade old; refresh it from Lowell if
+  you need current elements.
+- **Why the 35 MB binary is committed**: `temp/astorb3d.bin` is checked in on purpose so the
+  GitHub Pages site can fetch it directly with no build step.
+
+### Rebuilding the binary
+
+The converter accepts the gzipped database straight from the repo, no manual gunzip needed:
+
+```bash
+node tools/astorb2bin.js -i astorb/astorb.dat.gz -o temp/astorb3d.bin
+```
+
+`tools/astorb2bin.js` parses each 267-character `astorb.dat` record (see
+`tools/astorb_line.js`), writes the six orbital elements per asteroid as little-endian
+Float32, and the app loads that buffer verbatim into a WebGL vertex buffer. Keep the field
+order in sync between the converter and the loader if you ever change the layout.

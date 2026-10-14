@@ -5,7 +5,7 @@
 
 var fileSystem = require("fs");
 var readline = require("readline");
-var buffer = require("buffer");
+var zlib = require("zlib");
 // var stream = require("stream");
 var assert = require("assert");
 var astorb_line = require("./astorb_line.js");
@@ -14,10 +14,13 @@ var minimist = require("minimist");
 
 function printUsage(exitCode)
 {
-    console.log("Usage: node %s -i path/to/astorb.dat -o path/to/output.file", process.argv[1]);
+    console.log(
+        "Usage: node %s -i path/to/astorb.dat[.gz] -o path/to/output.file",
+        process.argv[1]
+    );
     console.log("");
     console.log("Options:");
-    console.log("  -i, --input   path/to/astorb.dat (required)");
+    console.log("  -i, --input   path/to/astorb.dat or path/to/astorb.dat.gz (required)");
     console.log("  -o, --output  path/to/output.file (required)");
     console.log("  -h, --help    show this help");
 
@@ -83,6 +86,13 @@ var inputFileSize = inputFileStats.size;
 console.log("input file size = %d MB", (inputFileSize / (1024.0 * 1024.0)).toFixed(2));
 
 var inputFileStream = fileSystem.createReadStream(inputFilePath);
+// The repo ships the database gzipped (astorb/astorb.dat.gz); decompress on
+// the fly so callers can pass the .gz directly without an intermediate file.
+if (/\.gz$/i.test(inputFilePath))
+{
+    console.log("input is gzipped, decompressing while reading");
+    inputFileStream = inputFileStream.pipe(zlib.createGunzip());
+}
 var outputFileStream = process.stdout;
 var astorbLines = readline.createInterface(inputFileStream, outputFileStream);
 
@@ -110,9 +120,9 @@ function writeAsteroidsBinaryFile(filePath, asteroids)
     var bytesPerFloat = 4;
 
     var byteCount = asteroidCount * asteroidFloatCount * bytesPerFloat;
-    var asteroidBuffer = new buffer.Buffer(byteCount);
+    var asteroidBuffer = Buffer.alloc(byteCount);
 
-    for (var asteroidIndex in asteroids)
+    for (var asteroidIndex = 0; asteroidIndex < asteroids.length; asteroidIndex++)
     {
         var byteOffset = asteroidIndex * asteroidFloatCount * bytesPerFloat;
 
@@ -145,7 +155,7 @@ astorbLines.on("close", function ()
     console.log("asteroid count = %d", asteroidCount);
 
     var averageEccentricity = totalEccentricity / asteroidCount;
-    console.log("average eccentricity = %d", averageEccentricity.toFixed(5));
+    console.log("average eccentricity = %s", averageEccentricity.toFixed(5));
 
     writeAsteroidsBinaryFile(outputFilePath, asteroids);
 });

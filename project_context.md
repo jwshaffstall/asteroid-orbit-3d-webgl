@@ -71,8 +71,9 @@ These are the npm scripts defined in `package.json`:
 
 ### Data Conversion
 
-To rebuild the binary data buffer from an updated database:
+To rebuild the binary data buffer from an updated database (the converter reads the
+gzipped `astorb.dat.gz` shipped in this repo directly; plain `.dat` works too):
 
 ```bash
-node tools/astorb2bin.js -i astorb/astorb.dat -o temp/astorb3d.bin
+node tools/astorb2bin.js -i astorb/astorb.dat.gz -o temp/astorb3d.bin
 ```
