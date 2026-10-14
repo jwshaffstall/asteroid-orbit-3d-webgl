@@ -1051,7 +1051,10 @@ astorb.initBodies = function (gl)
 
     var bodyBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, bodyBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(astorb.bodyCount * 7), gl.DYNAMIC_DRAW);
+    // Preallocate the per-frame body upload array once here; updateBodies()
+    // reuses it every frame instead of allocating a new Float32Array 60x/sec.
+    astorb.bodyData = new Float32Array(astorb.bodyCount * 7);
+    gl.bufferData(gl.ARRAY_BUFFER, astorb.bodyData, gl.DYNAMIC_DRAW);
     astorb.bodyBuffer = bodyBuffer;
 };
 
@@ -1150,11 +1153,20 @@ astorb.initOrbitLabels = function ()
         label.className = "orbit-label";
         label.textContent = name;
         labelLayer.appendChild(label);
+        // Orbit geometry never changes, so sample the path once here instead
+        // of re-solving Kepler's equation for every segment on every frame.
+        var points = [];
+        for (var segmentIndex = 0; segmentIndex <= segments; segmentIndex++)
+        {
+            var meanAnomaly = 360.0 * (segmentIndex / segments);
+            points.push(astorb.computeOrbitPoint(orbit, meanAnomaly));
+        }
         labels.push({
             name: name,
             orbit: orbit,
             segments: segments,
             element: label,
+            points: points,
         });
     };
 
@@ -1203,15 +1215,15 @@ astorb.updateOrbitLabels = function ()
     for (var labelIndex = 0; labelIndex < astorb.orbitLabels.length; labelIndex++)
     {
         var labelInfo = astorb.orbitLabels[labelIndex];
-        var orbit = labelInfo.orbit;
-        var segments = labelInfo.segments || 240;
+        // Use the path points sampled once at init; only the camera moves, so
+        // finding the closest precomputed point is all the per-frame work left.
+        var points = labelInfo.points || [];
         var minDistance = Infinity;
         var closestPoint = null;
 
-        for (var segmentIndex = 0; segmentIndex <= segments; segmentIndex++)
+        for (var pointIndex = 0; pointIndex < points.length; pointIndex++)
         {
-            var meanAnomaly = 360.0 * (segmentIndex / segments);
-            var point = astorb.computeOrbitPoint(orbit, meanAnomaly);
+            var point = points[pointIndex];
             var dx = point[0] - cameraPosition[0];
             var dy = point[1] - cameraPosition[1];
             var dz = point[2] - cameraPosition[2];
@@ -1278,7 +1290,13 @@ astorb.updateBodies = function (timeSec)
     var gl = astorb.gl;
     if (!astorb.bodyBuffer) return;
 
-    var bodyData = new Float32Array(astorb.bodyCount * 7);
+    // Reuse the preallocated upload array (see initBodies) to avoid a
+    // per-frame allocation and the GC churn that comes with it.
+    var bodyData = astorb.bodyData;
+    if (!bodyData || bodyData.length !== astorb.bodyCount * 7)
+    {
+        return;
+    }
     var cursor = 0;
 
     var positions = {};
@@ -1340,7 +1358,7 @@ astorb.updateBodies = function (timeSec)
     }
 
     gl.bindBuffer(gl.ARRAY_BUFFER, astorb.bodyBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, bodyData, gl.DYNAMIC_DRAW);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, bodyData);
 };
 
 // Set up pointer, touch, wheel, and keyboard interactions for the camera.
@@ -1543,14 +1561,17 @@ astorb.setupCameraControls = function (canvas)
         }
     };
 
-    canvas.addEventListener("keydown", handleKeydown);
+    // Register the shortcut handler once on window. Registering it on both the
+    // canvas and window would fire every shortcut twice whenever the canvas has
+    // focus (keydown bubbles from canvas up to window), which made toggles like
+    // Space and C appear to do nothing and made Up/Down change speed 4x.
     window.addEventListener("keydown", handleKeydown);
 
     astorb.log(
         "Controls: Drag to rotate, Scroll/pinch to zoom, Space=pause, Up/Down=speed, 0/O=reset time",
         "green"
     );
-    astorb.log("Click on canvas first to enable keyboard controls", "green");
+    astorb.log("Keyboard shortcuts work anywhere on the page", "green");
 };
 
 astorb.setupTimeControls = function ()
@@ -1827,11 +1848,6 @@ astorb.setupPointSizeControls = function ()
         {
             astorb.pointSizeIndex = (astorb.pointSizeIndex + 1) % astorb.pointSizes.length;
             astorb.pointSize = astorb.pointSizes[astorb.pointSizeIndex];
-            astorb.cinematicMode = {
-                enabled: false,
-                angularVelocity: 0.11,
-                zoomAmplitude: 0.08,
-            };
             astorb.applyPointSize();
             astorb.refreshPointSizeControls();
         });
