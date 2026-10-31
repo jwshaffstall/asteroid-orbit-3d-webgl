@@ -1,0 +1,3 @@
+# One last dataset committed to git for v1.1, then never again
+
+v1.1 deploys the way the site always has (GitHub Pages serving `master` from the repo root), so the rebuilt v1 binary from the Oct 2026 snapshot (37.9 MB, under GitHub's 50 MB warning) is committed to git once. Git history is deliberately left alone: no `filter-repo` and no force-push, so the old data blobs stay too. From v2.0, deploys come from the `dist/` build, and datasets live outside git (release assets fetched at build time). Pulling the `dist/` deploy forward into v1.1 would have avoided the blob, but it would have delayed the correctness fixes by days for a repo-size saving we decided we don't care about.
