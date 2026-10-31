@@ -5,3 +5,7 @@ node_modules/
 artifacts/
 
 dist/
+
+# Raw source catalogs (hundreds of MB; archived as release assets instead)
+temp/*.dat
+temp/*.dat.gz
