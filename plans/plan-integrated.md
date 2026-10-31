@@ -20,6 +20,8 @@ This plan merges `plans/archive/plan.md` (Revision 3) and `plans/archive/plan-al
 - **Honest about limits.** The UI always shows the displayed date, the epoch, the model (two-body), and an accuracy caveat when you are past the validated window.
 - **Agent-friendly slices.** Each checkbox is sized for one PR with its own test. Any PR that changes a constraint stated in `AGENTS.md` / `CLAUDE.md` updates those files in the same PR.
 
+Checkbox key: `[x]` done and verified, `[~]` partly done (see its note), `[ ]` not started.
+
 Effort key: **S** ≈ 1–2 days, **M** ≈ 3–5 days, **L** ≈ 1–2 weeks, **L+** ≈ 3 weeks or more, of solo or agent-assisted work.
 
 ### Releases
@@ -59,33 +61,35 @@ Goal: a green CI baseline, a reproducible dataset from either of two sources, an
 
 **Repo hygiene and tooling (do first, so later diffs are clean)**
 
-- [ ] Tag current `master` as `v1-baseline` so every later screenshot and benchmark has a comparison point.
-- [ ] Keep Prettier (the codebase's Allman brace style depends on `prettier-plugin-brace-style`) and remove `oxfmt`; remove lint rules duplicated between ESLint and oxlint. Land the resulting reformat as one commit and add it to `.git-blame-ignore-revs`.
-- [ ] Node 24 LTS in CI and `engines` (Node 22 is in maintenance by late 2026; 24 strips TypeScript types natively, which Phase 8a relies on). Current major versions of the checkout, setup-node and upload-artifact actions; `npm ci` instead of `npm install`; cache Playwright browsers.
-- [ ] Inventory third-party licenses in `scripts/js/libs/` and keep the required notices.
+- [x] Tag current `master` as `v1-baseline` so every later screenshot and benchmark has a comparison point. _(Done Oct 31: local tag on `9322001`; push it with `git push origin v1-baseline`.)_
+- [x] Keep Prettier (the codebase's Allman brace style depends on `prettier-plugin-brace-style`) and remove `oxfmt`; remove lint rules duplicated between ESLint and oxlint. Land the resulting reformat as one commit and add it to `.git-blame-ignore-revs`. _(Done: `oxfmt` removed; `eslint-plugin-oxlint` turns off the 69 ESLint rules oxlint already runs. No reformat was needed (only the archived plan failed the check; it's now in `.prettierignore`), so there is no blame-ignore commit.)_
+- [x] Node 24 LTS in CI and `engines` (Node 22 is in maintenance by late 2026; 24 strips TypeScript types natively, which Phase 8a relies on). Current major versions of the checkout, setup-node and upload-artifact actions; `npm ci` instead of `npm install`; cache Playwright browsers. _(Done: `engines.node >= 24`; checkout/setup-node/upload-artifact v7, cache v6.)_
+- [x] Inventory third-party licenses in `scripts/js/libs/` and keep the required notices. _(Done: `THIRD_PARTY_NOTICES.md`; gl-matrix 2.2.0 is BSD-2-Clause, stats.js is MIT.)_
 - [x] Source plans moved to `plans/archive/` (accepted Oct 31, 2026).
 - [x] Raw catalogs in `temp/` (`*.dat`, `*.dat.gz`) are gitignored, so a 423 MB source file can't be committed by accident. Add `.junie/` too if it shouldn't be tracked (`.idea/` already is ignored).
 
 **Data**
 
-- [ ] Write `tools/fetch-catalog.mjs` for Lowell astorb (download page <https://asteroid.lowell.edu/astorb/>, confirmed working on Oct 30, 2026; record the exact file URL the script uses). **Lowell is the only source.** If it's down, retry another day; MPCORB is documented as plan B, and its parser is a stretch item.
-- [ ] **First snapshot, already downloaded:** `temp/2026-10-30-astorb.dat` (Lowell, uncompressed, 423,277,592 bytes, SHA-256 `4e3d54fbbf74bf9575f359f66d2f5f14c8066858b08e4a1fed059e00cf9dba73`). Checked on Oct 31: 1,579,394 records, every line exactly 267 characters with LF endings, and **one shared epoch, 2026-09-17** (JD 2461300.5). That is 92,170 more records than the shipped binary. This file is the v1.1 source; archive it gzipped as release asset `data-lowell-20261030`.
-- [ ] Archive each fetched raw file as a GitHub release asset (`data-<source>-<YYYYMMDD>`), and record its SHA-256, download date, source, record count and epoch distribution in `data/manifest.source.json`. The build reads from the archived asset by checksum. That is what makes the build reproducible.
-- [ ] Add parser fixtures parsed by **field offsets, not line length**: Lowell's records (267 characters per line in the Oct 2026 file; the docs say 266 columns, so the parser must not depend on either number) with LF and CRLF endings; Lowell's 2018 format changes (inclinations above 99.99999°, a ≥ 1000 AU written as F13.7 instead of F13.8, an optional leading space before i and a, asteroid numbers stored as character fields); blank and rejected rows. Today's code expects 255, 267 or 268 characters depending on the file.
-- [ ] Stop tracking the 2013 `astorb/astorb.dat.gz` (623,669 records) on `master`; it contradicts the shipped binary (1,487,224 records) and nothing loads it. Leave `temp/astorb3d.bin` in place: the live site serves it from the repo root until Phase 8a switches deploys to `dist/`. **Decided:** git history is left alone (no `filter-repo`, no force-push); old data blobs stay in history.
+- [x] Write `tools/fetch-catalog.mjs` for Lowell astorb (download page <https://asteroid.lowell.edu/astorb/>, confirmed working on Oct 30, 2026; record the exact file URL the script uses). **Lowell is the only source.** If it's down, retry another day; MPCORB is documented as plan B, and its parser is a stretch item. _(Done: the file URL is `https://ftp.lowell.edu/pub/elgb/astorb.dat.gz` (108.97 MB); `npm run data:fetch`.)_
+- [~] **First snapshot, already downloaded:** `temp/2026-10-30-astorb.dat` (Lowell, uncompressed, 423,277,592 bytes, SHA-256 `4e3d54fbbf74bf9575f359f66d2f5f14c8066858b08e4a1fed059e00cf9dba73`). Checked on Oct 31: 1,579,394 records, every line exactly 267 characters with LF endings, and **one shared epoch, 2026-09-17** (JD 2461300.5). That is 92,170 more records than the shipped binary. This file is the v1.1 source; archive it gzipped as release asset `data-lowell-20261030`. _(Partly done: `temp/2026-10-30-astorb.dat.gz` created with `gzip -9 -n` (sha256 `4c6e1c7d…75ed`) and recorded in `data/manifest.source.json`. **Owner:** upload it with the `gh release create data-lowell-20261030 …` command that `npm run data:refresh` prints, then set `archived: true`.)_
+- [~] Archive each fetched raw file as a GitHub release asset (`data-<source>-<YYYYMMDD>`), and record its SHA-256, download date, source, record count and epoch distribution in `data/manifest.source.json`. The build reads from the archived asset by checksum. That is what makes the build reproducible. _(Partly done: `data/manifest.source.json` and the tooling exist; the upload itself is the owner's step (it publishes a public release).)_
+- [x] Add parser fixtures parsed by **field offsets, not line length**: Lowell's records (267 characters per line in the Oct 2026 file; the docs say 266 columns, so the parser must not depend on either number) with LF and CRLF endings; Lowell's 2018 format changes (inclinations above 99.99999°, a ≥ 1000 AU written as F13.7 instead of F13.8, an optional leading space before i and a, asteroid numbers stored as character fields); blank and rejected rows. Today's code expects 255, 267 or 268 characters depending on the file. _(Done: `tests/fixtures/astorb-lines.dat` holds 13 real lines incl. 20461 Dioretsa (i = 160.4°) and 2005 VX3 (a = 1037 AU); the old parser misread both, and the shipped binary had zero objects with i ≥ 100° vs 160 in the catalog.)_
+- [x] Stop tracking the 2013 `astorb/astorb.dat.gz` (623,669 records) on `master`; it contradicts the shipped binary (1,487,224 records) and nothing loads it. Leave `temp/astorb3d.bin` in place: the live site serves it from the repo root until Phase 8a switches deploys to `dist/`. **Decided:** git history is left alone (no `filter-repo`, no force-push); old data blobs stay in history. _(Done: untracked and gitignored; history untouched.)_
 
 **Reference truth and harness**
 
-- [ ] Fix the screenshot tool: `page.waitForFunction(fn, { timeout })` passes the options object as the function's argument, so the 120 s timeout is ignored and the default 30 s applies. Use `waitForFunction(fn, undefined, { timeout })`. Make a render timeout fail the job instead of uploading a blank screenshot as a success.
-- [ ] Add deterministic URL parameters (`?t=<seconds>&cam=<az,el,dist>&color=<n>&paused=1`) so screenshots and tests render an identical frame every run.
-- [ ] Capture 2 smoke screenshots (one fixed time and camera, one mobile viewport); upload as CI artifacts and re-baseline them at the end of Phase 1.
-- [ ] Add a smoke test that fails on any console error or `gl.getError()` during a 10-second run.
-- [ ] Write a short perf note in `docs/perf.md`: download size and rough FPS on the owner's desktop and **iPhone 13 Pro** (iOS Safari, 3× display; Safari usually runs `requestAnimationFrame` at 60 Hz). For comparison only, not a gate.
-- [ ] Pull JPL Horizons heliocentric ecliptic J2000 state vectors into `tests/fixtures/horizons/` for the epoch, epoch ±50 days and epoch ±10 years. Bodies: the eight planets (Earth as the Earth–Moon barycenter), Ceres, Vesta, 624 Hektor (Trojan L4), 1172 Äneas (Trojan L5), 153 Hilda, 433 Eros (NEO), 3200 Phaethon (e ≈ 0.89), Pluto, and the major moons for Phase 5. Commit the fetch script (`tools/horizons-fixtures.mjs`) so the fixtures can be regenerated for a new epoch.
-- [ ] Build a deterministic \~20,000-record fixture dataset sampled across every dynamical class, for PR CI and visual tests. The full catalog runs only in the on-demand full-catalog job (Phase 9), since software-rendered WebGL is too slow for 1.58M points on every PR.
-- [ ] Get `npm ci`, `npm test`, `npm run lint`, `npm run format:check` and `npm run build` running in CI. Mark the known-broken build step as expected-fail until Phase 8a fixes it: today `dist/` contains neither the classic scripts nor `temp/astorb3d.bin`, and an audit step in CI proves this.
+- [x] Fix the screenshot tool: `page.waitForFunction(fn, { timeout })` passes the options object as the function's argument, so the 120 s timeout is ignored and the default 30 s applies. Use `waitForFunction(fn, undefined, { timeout })`. Make a render timeout fail the job instead of uploading a blank screenshot as a success. _(Done; also replaced its static server, whose `startsWith` path check could be bypassed by a sibling directory sharing the prefix, with `tools/static-server.js`.)_
+- [x] Add deterministic URL parameters (`?t=<seconds>&cam=<az,el,dist>&color=<n>&paused=1`) so screenshots and tests render an identical frame every run. _(Done, plus `&debug=1` (counts `gl.getError()`) and `&data=<relative .bin>` (tests load the fixture).)_
+- [x] Capture 2 smoke screenshots (one fixed time and camera, one mobile viewport); upload as CI artifacts and re-baseline them at the end of Phase 1. _(Done in `.github/workflows/ci.yml` on the fixture dataset; full-catalog screenshots in the on-demand `full-catalog.yml`.)_
+- [x] Add a smoke test that fails on any console error or `gl.getError()` during a 10-second run. _(Done: `tests/e2e/app.e2e.mjs`, 10-second run with `?debug=1`.)_
+- [~] Write a short perf note in `docs/perf.md`: download size and rough FPS on the owner's desktop and **iPhone 13 Pro** (iOS Safari, 3× display; Safari usually runs `requestAnimationFrame` at 60 Hz). For comparison only, not a gate. _(Partly done: `docs/perf.md` has sizes and a headless timing; desktop and iPhone FPS are for the owner to fill in.)_
+- [x] Pull JPL Horizons heliocentric ecliptic J2000 state vectors into `tests/fixtures/horizons/` for the epoch, epoch ±50 days and epoch ±10 years. Bodies: the eight planets (Earth as the Earth–Moon barycenter), Ceres, Vesta, 624 Hektor (Trojan L4), 1172 Äneas (Trojan L5), 153 Hilda, 433 Eros (NEO), 3200 Phaethon (e ≈ 0.89), Pluto, and the major moons for Phase 5. Commit the fetch script (`tools/horizons-fixtures.mjs`) so the fixtures can be regenerated for a new epoch. _(Done: `npm run data:horizons -- --epoch YYYY-MM-DD`; also writes `data/dwarf-planets.json`. Pluto is included; the major moons are deferred to Phase 5, which is when they're needed.)_
+- [x] Build a deterministic \~20,000-record fixture dataset sampled across every dynamical class, for PR CI and visual tests. The full catalog runs only in the on-demand full-catalog job (Phase 9), since software-rendered WebGL is too slow for 1.58M points on every PR. _(Done: `tests/fixtures/astorb-fixture.bin`, 19,994 records, all 15 classes, byte-identical rebuilds; `npm run data:fixture`.)_
+- [x] Get `npm ci`, `npm test`, `npm run lint`, `npm run format:check` and `npm run build` running in CI. Mark the known-broken build step as expected-fail until Phase 8a fixes it: today `dist/` contains neither the classic scripts nor `temp/astorb3d.bin`, and an audit step in CI proves this. _(Done: `ci.yml`; the `build` job is `continue-on-error` with a `dist/` audit until Phase 8a.)_
 
 **Gate:** CI green on the baseline; the dataset rebuilds from an archived source file with one command, and its checksum matches; Horizons fixtures and the fixture dataset committed; the screenshot job fails on a real timeout.
+
+_Status (Oct 31, 2026): met locally (tests, lint, format, browser tests, byte-identical rebuild from the archived `.gz`). CI runs once the branch is pushed; the release-asset upload is the owner's step._
 
 ## Phase 1 — Astronomical correctness (M)
 
@@ -93,40 +97,42 @@ Goal: planets and asteroids share one correct epoch, and the scene is a faithful
 
 **Dataset for v1.1**
 
-- [ ] **Decided:** v1.1 commits the rebuilt binary to git once (37.9 MB, under GitHub's 50 MB warning); from v2.0 on, datasets never go into git. Rebuild `temp/astorb3d.bin` in the **unchanged** v1 layout (6 × float32) from the archived catalog, using the existing `astorb2bin.js` with the Phase 1 parser fixes. Write `temp/astorb3d.meta.json` next to it with the epoch (JD), record count, source and source SHA-256. The v1 binary gets no header, so its format only changes once, in Phase 3.
-- [ ] Validate in the converter: the byte length is a multiple of 24; no NaN or Infinity; reject e ≥ 1 and a ≤ 0. Log how many were dropped, with sample rows, to a rejection report.
+- [x] **Decided:** v1.1 commits the rebuilt binary to git once (37.9 MB, under GitHub's 50 MB warning); from v2.0 on, datasets never go into git. Rebuild `temp/astorb3d.bin` in the **unchanged** v1 layout (6 × float32) from the archived catalog, using the existing `astorb2bin.js` with the Phase 1 parser fixes. Write `temp/astorb3d.meta.json` next to it with the epoch (JD), record count, source and source SHA-256. The v1 binary gets no header, so its format only changes once, in Phase 3. _(Done: 1,579,394 records, 37,905,456 bytes, epoch 2026-09-17; also writes `temp/astorb3d.rejected.json`. `npm run data:build` rebuilds it byte-identically from the archived `.gz`.)_
+- [x] Validate in the converter: the byte length is a multiple of 24; no NaN or Infinity; reject e ≥ 1 and a ≤ 0. Log how many were dropped, with sample rows, to a rejection report. _(Done: 0 rejected in the Oct 2026 snapshot.)_
 
 **Planets**
 
-- [ ] Fix Earth: today the code stores ϖ in the ω field (102.94°), L in the M field (100.46°) and Ω = −11.26°, which puts Earth at about 194° heliocentric longitude at J2000 instead of \~100.46°. Use the Standish J2000 values consistently: a = 1.00000261, e = 0.01671123, i = −0.00001531°, Ω = 0°, ω = ϖ − Ω = 102.93768193°, M = L − ϖ = 357.52688973°.
-- [ ] Generate all planet elements with a script (`tools/planet-elements.mjs`) from Standish Table 1 (valid 1800–2050), converting ϖ and L to ω and M in code, so no hand conversion can drift again. The other planets have the same kind of hand conversion (Mars ω and M are rounded); replace them all.
-- [ ] Propagate planets with the table's own rates: L(T) = L₀ + L̇·T with T in Julian centuries from J2000, plus the per-century rates for a, e, i, ϖ and Ω. Stop deriving planet mean motion from μ☉ alone: that ignores each planet's mass and puts Jupiter about 0.3° off by 2025.
-- [ ] Note in code that the table gives the Earth–Moon barycenter; Earth's \~4,700 km offset from it is under 0.002° as seen from the Sun.
-- [ ] Take dwarf-planet elements from the same epoch as the asteroids: Ceres (and Pallas, Vesta for highlighting) straight from their catalog rows; Pluto, Haumea, Makemake, Eris from Horizons at the epoch, generated by the fixture script rather than pasted in by hand.
-- [ ] Label moon orbits "illustrative" in the UI until Phase 5 gives them real planes and phases.
+- [x] Fix Earth: today the code stores ϖ in the ω field (102.94°), L in the M field (100.46°) and Ω = −11.26°, which puts Earth at about 194° heliocentric longitude at J2000 instead of \~100.46°. Use the Standish J2000 values consistently: a = 1.00000261, e = 0.01671123, i = −0.00001531°, Ω = 0°, ω = ϖ − Ω = 102.93768193°, M = L − ϖ = 357.52688973°.
+- [x] Generate all planet elements with a script (`tools/planet-elements.mjs`) from Standish Table 1 (valid 1800–2050), converting ϖ and L to ω and M in code, so no hand conversion can drift again. The other planets have the same kind of hand conversion (Mars ω and M are rounded); replace them all. _(Done differently: no generated file. `planetElementsAt()` in `scripts/js/astorb-astro.js` holds Table 1 verbatim and converts ϖ and L to ω and M in code at runtime, which meets the same goal with one less artifact.)_
+- [x] Propagate planets with the table's own rates: L(T) = L₀ + L̇·T with T in Julian centuries from J2000, plus the per-century rates for a, e, i, ϖ and Ω. Stop deriving planet mean motion from μ☉ alone: that ignores each planet's mass and puts Jupiter about 0.3° off by 2025. _(Done: worst planet vs Horizons is Saturn at 0.074°.)_
+- [x] Note in code that the table gives the Earth–Moon barycenter; Earth's \~4,700 km offset from it is under 0.002° as seen from the Sun.
+- [x] Take dwarf-planet elements from the same epoch as the asteroids: Ceres (and Pallas, Vesta for highlighting) straight from their catalog rows; Pluto, Haumea, Makemake, Eris from Horizons at the epoch, generated by the fixture script rather than pasted in by hand. _(Done via `temp/astorb3d.meta.json` → `bodies`; Pallas and Vesta are in the metadata, ready for highlighting.)_
+- [x] Label moon orbits "illustrative" in the UI until Phase 5 gives them real planes and phases. _(Done in the help panel.)_
 
 **Epoch**
 
-- [ ] Parse each record's epoch (columns 107–114, YYYYMMDD) and treat it as a UTC date; the 69 s TT/UTC difference is invisible here. Lowell records share one epoch; assert that, and log any exceptions.
-- [ ] Any record whose epoch differs from the dataset epoch is propagated to it in the converter with two-body mean motion: M ← M + n·Δt. This is cheap insurance for Lowell and a prerequisite for a future MPCORB source. Log how many were propagated and the largest Δt.
-- [ ] At runtime, read the epoch from `astorb3d.meta.json` (the v2 manifest from Phase 3 on). The epoch is the internal time origin (t_sim = 0); the app **opens at today's date** (sim date = now), not at the epoch. Delete the hard-coded `Date.UTC(2013, 9, 15, …)` constant and the "October 15, 2013" comments. The deterministic `?t=` parameter still pins an exact sim date for tests.
-- [ ] Evaluate planets at T = (epoch − J2000 + t_sim) in Julian centuries, from the metadata value, in float64 in JS.
+- [x] Parse each record's epoch (columns 107–114, YYYYMMDD) and treat it as a UTC date; the 69 s TT/UTC difference is invisible here. Lowell records share one epoch; assert that, and log any exceptions.
+- [x] Any record whose epoch differs from the dataset epoch is propagated to it in the converter with two-body mean motion: M ← M + n·Δt. This is cheap insurance for Lowell and a prerequisite for a future MPCORB source. Log how many were propagated and the largest Δt. _(Done and tested; records more than 10 years off are rejected instead.)_
+- [x] At runtime, read the epoch from `astorb3d.meta.json` (the v2 manifest from Phase 3 on). The epoch is the internal time origin (t_sim = 0); the app **opens at today's date** (sim date = now), not at the epoch. Delete the hard-coded `Date.UTC(2013, 9, 15, …)` constant and the "October 15, 2013" comments. The deterministic `?t=` parameter still pins an exact sim date for tests. _(Done. The header comment "Tuesday, October 15, 2013" in the source files is the author's date and was kept.)_
+- [x] Evaluate planets at T = (epoch − J2000 + t_sim) in Julian centuries, from the metadata value, in float64 in JS.
 
 **Shader physics**
 
-- [ ] Delete the Jupiter resonance block (Trojan and Hilda mean-motion blending plus invented libration terms). It slows Hildas from 1.50× to 1.29× Jupiter's mean motion. Plain two-body motion from a correct epoch keeps Trojans and Hildas in place for decades. It also removes `exp`/`pow` work for every vertex.
-- [ ] Switch every vertex shader (and every fragment shader that uses these values) to `precision highp float;`. μ = 3.96e−14 and time in seconds both fall outside mediump's guaranteed range. Check `getShaderPrecisionFormat(VERTEX_SHADER, HIGH_FLOAT)` at startup and show a clear message if highp isn't available, instead of silently drawing wrong orbits.
-- [ ] Improve the Kepler solver: reduce M to \[−π, π\]; use Danby's starting value E₀ = M + 0.85·e·sign(sin M) for every e; use a fixed iteration count picked by test (the smallest count that meets the float32 tolerance at e = 0.99 for all M; expected 5–6).
-- [ ] JS gets two functions from one source: `solveKepler()` (float64, iterates until |ΔE| < 1e−12, at most 50 times) as the reference, and `solveKeplerF32()`, which mirrors the GLSL step for step using `Math.fround`, as the stand-in for the shader under test.
-- [ ] Clamp the reachable sim range to ±1,000 years from the epoch. Show "planet positions approximate" outside 1800–2050 (Standish Table 1's fitted range, used everywhere) and a notice past ±100 years, since two-body drift and float32 phase error both grow with time.
+- [x] Delete the Jupiter resonance block (Trojan and Hilda mean-motion blending plus invented libration terms). It slows Hildas from 1.50× to 1.29× Jupiter's mean motion. Plain two-body motion from a correct epoch keeps Trojans and Hildas in place for decades. It also removes `exp`/`pow` work for every vertex.
+- [x] Switch every vertex shader (and every fragment shader that uses these values) to `precision highp float;`. μ = 3.96e−14 and time in seconds both fall outside mediump's guaranteed range. Check `getShaderPrecisionFormat(VERTEX_SHADER, HIGH_FLOAT)` at startup and show a clear message if highp isn't available, instead of silently drawing wrong orbits. _(Done. Also found that the default "Angular Velocity" color mode passed ~1e-8 rad/s to a mediump fragment shader, below its range; it now uses rad/day.)_
+- [x] Improve the Kepler solver: reduce M to \[−π, π\]; use Danby's starting value E₀ = M + 0.85·e·sign(sin M) for every e; use a fixed iteration count picked by test (the smallest count that meets the float32 tolerance at e = 0.99 for all M; expected 5–6). _(Done with **7** iterations: 6 leaves 1.9e-4 rad of error at e = 0.99, 7 reaches the float32 floor.)_
+- [x] JS gets two functions from one source: `solveKepler()` (float64, iterates until |ΔE| < 1e−12, at most 50 times) as the reference, and `solveKeplerF32()`, which mirrors the GLSL step for step using `Math.fround`, as the stand-in for the shader under test. _(Done; plus `reduceMeanAnomalyF32()` mirroring the shader's float32 reduction of M.)_
+- [x] Clamp the reachable sim range to ±1,000 years from the epoch. Show "planet positions approximate" outside 1800–2050 (Standish Table 1's fitted range, used everywhere) and a notice past ±100 years, since two-body drift and float32 phase error both grow with time.
 
 **Tests**
 
-- [ ] Kepler: `solveKepler` residual < 1e−12 rad at e = 0, 0.2, 0.5, 0.9, 0.99 over a dense M grid, including negative time and wrap across ±π; return to the same position after exactly one period. `solveKeplerF32` within 2e−6 rad of `solveKepler` on the same grid.
-- [ ] Planet tests (bug catchers, not precision certificates): every planet's heliocentric direction within 0.5° of Horizons at the epoch and at ±10 years. Include an explicit test that Earth's L isn't used as M.
-- [ ] Asteroid spot checks: Ceres, Vesta, Hektor, Äneas, Hilda, Eros, Phaethon within 0.5° of Horizons at epoch ±50 days.
+- [x] Kepler: `solveKepler` residual < 1e−12 rad at e = 0, 0.2, 0.5, 0.9, 0.99 over a dense M grid, including negative time and wrap across ±π; return to the same position after exactly one period. `solveKeplerF32` within 2e−6 rad of `solveKepler` on the same grid. _(Done. `solveKeplerF32` is compared on the same float32-reduced M the shader sees: within 2e-6 rad for e ≤ 0.9; float32 conditioning near e = 1 needs 1e-5 at e = 0.99.)_
+- [x] Planet tests (bug catchers, not precision certificates): every planet's heliocentric direction within 0.5° of Horizons at the epoch and at ±10 years. Include an explicit test that Earth's L isn't used as M. _(Done, including a regression test that the old Earth elements would fail.)_
+- [x] Asteroid spot checks: Ceres, Vesta, Hektor, Äneas, Hilda, Eros, Phaethon within 0.5° of Horizons at epoch ±50 days. _(Done, plus Pluto from Horizons elements.)_
 
 **Gate:** all accuracy tests pass; a screenshot with `?t=0` (sim date = epoch) shows Earth, Mars and Jupiter where Horizons puts them at the epoch; smoke screenshots re-baselined.
+
+_Status (Oct 31, 2026): met. Planets within 0.074° of Horizons (Saturn worst), asteroid spot checks and Pluto within 0.5°; `npm run screenshot` at `?t=0` shows the epoch date 2026-09-17._
 
 ## Phase 2 — Quick fixes and the v1.1 release (S)
 
@@ -134,17 +140,17 @@ Goal: ship Phase 1's correctness work on the existing app within days. Only smal
 
 **Fixes**
 
-- [ ] Remove the canvas `keydown` listener (`astorb3d.js:1546`) and keep only the window one; today a focused canvas gets every key twice (Space pauses then unpauses, arrows change speed 4×, R randomizes twice).
-- [ ] Ignore `event.repeat` for toggles; skip shortcuts while focus is in a button, input, select, textarea or contenteditable element.
-- [ ] **Fix the density LOD stride bug.** Halving density doubles the attribute stride (24 B × 2ᵏ, up to the record count), but WebGL caps stride at 255 bytes, so from the 4th halving on, `vertexAttribPointer` raises `INVALID_VALUE` and the asteroids vanish. Replace it with a prefix draw count (`drawArrays(0, n)`) at stride 24; Phase 4 keeps the same approach.
-- [ ] Make the XHR loader settle once: `onreadystatechange`, `onerror` and `ontimeout` can each call the callback, so a single failure can trigger it twice. Keep one terminal state.
-- [ ] Clamp the per-frame wall-clock delta (e.g. to 100 ms) so returning to a background tab doesn't jump the simulation by minutes × timeScale.
-- [ ] Check every attribute and uniform location before use; never `enableVertexAttribArray(-1)`, especially in the body shader.
-- [ ] Stop the Point Size handler from resetting `cinematicMode` (it silently turns cinematic off while the button still reads "On").
-- [ ] Disable `depthMask` during the additive asteroid pass; additive blending with depth writes makes results depend on draw order.
-- [ ] Add the data attribution Lowell requires to the page footer and README: NASA grant NAG5-4741 (PI E. Bowell), the Lowell Observatory endowment, NASA PDART grant NNX16AG52G (PI N. Moskovitz), and the citation DOI 10.1016/j.ascom.2022.100661. The footer shows the epoch and snapshot date from `astorb3d.meta.json`.
-- [ ] Fix small defects: dead `if (event)` in mouseup; `</br>` → `<br>`; parser message says 255 but checks 267; Python shebang `#!usr/bin/env` → `#!/usr/bin/env`; `new Buffer()` → `Buffer.alloc()`; `for…in` over arrays → indexed loop (`astorb2bin.js:115`).
-- [ ] Delete the unused vendored libraries `sylvester.src.js` and `glUtils.js` (their `<script>` tags are already commented out) along with the commented-out tags.
+- [x] Remove the canvas `keydown` listener (`astorb3d.js:1546`) and keep only the window one; today a focused canvas gets every key twice (Space pauses then unpauses, arrows change speed 4×, R randomizes twice).
+- [x] Ignore `event.repeat` for toggles; skip shortcuts while focus is in a button, input, select, textarea or contenteditable element.
+- [x] **Fix the density LOD stride bug.** Halving density doubles the attribute stride (24 B × 2ᵏ, up to the record count), but WebGL caps stride at 255 bytes, so from the 4th halving on, `vertexAttribPointer` raises `INVALID_VALUE` and the asteroids vanish. Replace it with a prefix draw count (`drawArrays(0, n)`) at stride 24; Phase 4 keeps the same approach.
+- [x] Make the XHR loader settle once: `onreadystatechange`, `onerror` and `ontimeout` can each call the callback, so a single failure can trigger it twice. Keep one terminal state. _(Done; also raised the 45 s timeout, which failed the 38 MB download below ~7 Mbit/s, to 5 minutes.)_
+- [x] Clamp the per-frame wall-clock delta (e.g. to 100 ms) so returning to a background tab doesn't jump the simulation by minutes × timeScale.
+- [x] Check every attribute and uniform location before use; never `enableVertexAttribArray(-1)`, especially in the body shader.
+- [x] Stop the Point Size handler from resetting `cinematicMode` (it silently turns cinematic off while the button still reads "On").
+- [x] Disable `depthMask` during the additive asteroid pass; additive blending with depth writes makes results depend on draw order.
+- [x] Add the data attribution Lowell requires to the page footer and README: NASA grant NAG5-4741 (PI E. Bowell), the Lowell Observatory endowment, NASA PDART grant NNX16AG52G (PI N. Moskovitz), and the citation DOI 10.1016/j.ascom.2022.100661. The footer shows the epoch and snapshot date from `astorb3d.meta.json`.
+- [x] Fix small defects: dead `if (event)` in mouseup; `</br>` → `<br>`; parser message says 255 but checks 267; Python shebang `#!usr/bin/env` → `#!/usr/bin/env`; `new Buffer()` → `Buffer.alloc()`; `for…in` over arrays → indexed loop (`astorb2bin.js:115`).
+- [x] Delete the unused vendored libraries `sylvester.src.js` and `glUtils.js` (their `<script>` tags are already commented out) along with the commented-out tags.
 
 **Moved to Phase 8a** (structural, written once in the new layout): render loop decoupled from data loading, Pointer Events input, wheel normalization, log rewrite, precomputed label points, reused body buffer, load-error UI with Retry, context-loss handling, canvas background decision.
 
@@ -154,9 +160,11 @@ Goal: ship Phase 1's correctness work on the existing app within days. Only smal
 
 **Tests**
 
-- [ ] Playwright: Space toggles pause exactly once with the canvas focused; Point Size leaves cinematic mode unchanged; ten density halvings and doublings produce zero GL errors and a non-empty frame; no console errors during a 10-second run.
+- [x] Playwright: Space toggles pause exactly once with the canvas focused; Point Size leaves cinematic mode unchanged; ten density halvings and doublings produce zero GL errors and a non-empty frame; no console errors during a 10-second run. _(Done: `npm run test:e2e`, 7 tests, also on an iPhone 13 Pro-sized viewport.)_
 
 **Gate:** input and density tests pass; Phase 1 accuracy gates met; v1.1 is live.
+
+_Status (Oct 31, 2026): input, density and accuracy gates met on branch `feature/v1.1`. v1.1 is not live yet: merge to `master`, push, tag `v1.1` (Pages deploys `master` from the repo root)._
 
 ## Phase 3 — Data format v2 and verified progressive streaming (L)
 
@@ -474,10 +482,10 @@ Goal: one accurate source of guidance for people and agents, and a README that s
 
 **v1.1 is done when**
 
-- [ ] Every planet is within 0.5° of Horizons at the epoch and at ±10 years, and the epoch comes from the snapshot itself, recorded in `astorb3d.meta.json`.
-- [ ] The shipped binary is rebuilt from an archived, checksummed source.
-- [ ] Keyboard shortcuts act once per input; density changes never raise GL errors; cinematic mode survives a point-size change.
-- [ ] Lowell's required attribution is visible in the app and README.
+- [x] Every planet is within 0.5° of Horizons at the epoch and at ±10 years, and the epoch comes from the snapshot itself, recorded in `astorb3d.meta.json`.
+- [~] The shipped binary is rebuilt from an archived, checksummed source. _(Rebuilt and checksummed; the release-asset upload is pending.)_
+- [x] Keyboard shortcuts act once per input; density changes never raise GL errors; cinematic mode survives a point-size change.
+- [x] Lowell's required attribution is visible in the app and README.
 - [ ] v1.1 is tagged and live.
 
 **v2.0 is done when**

@@ -1,0 +1,19 @@
+{
+    "description": "Raw Lowell astorb snapshots the datasets are built from. Each is archived (gzip -9 -n) as a GitHub release asset named releaseAsset; rebuild with npm run data:build. sha256 is of the archived .gz; uncompressedSha256 of the .dat inside it.",
+    "snapshots": [
+        {
+            "date": "2026-10-30",
+            "catalog": "Lowell astorb",
+            "url": "https://ftp.lowell.edu/pub/elgb/astorb.dat.gz",
+            "file": "2026-10-30-astorb.dat.gz",
+            "bytes": 108970732,
+            "sha256": "4c6e1c7da95a55442504b6c66bf6db4b54e388876b874c30830cec8a481d75ed",
+            "records": 1579394,
+            "epoch": "2026-09-17",
+            "releaseAsset": "data-lowell-20261030",
+            "archived": false,
+            "uncompressedSha256": "4e3d54fbbf74bf9575f359f66d2f5f14c8066858b08e4a1fed059e00cf9dba73",
+            "uncompressedBytes": 423277592
+        }
+    ]
+}

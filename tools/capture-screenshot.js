@@ -1,106 +1,74 @@
+// capture-screenshot.js
+// Capture a deterministic screenshot of the app with headless Chromium (SwiftShader WebGL).
+//
+// Usage: node tools/capture-screenshot.js [--output artifacts/astorb3d.png]
+//        [--query "t=0&cam=0,20,12&paused=1"] [--width 1280 --height 720] [--mobile]
+// The query string is passed to astorb3d.html (see astorb.readUrlOptions). Exits non-zero if
+// the scene doesn't finish rendering, rather than saving a misleading blank screenshot.
+
 const fs = require("fs");
-const http = require("http");
 const path = require("path");
 const minimist = require("minimist");
-const { chromium } = require("playwright");
+const { chromium, devices } = require("playwright");
+const { startStaticServer } = require("./static-server.js");
 
-const args = minimist(process.argv.slice(2));
+const args = minimist(process.argv.slice(2), {
+    string: ["output", "query"],
+    boolean: ["mobile"],
+    default: { query: "t=0&cam=0,20,12&paused=1" },
+});
 const outputPath = args.output || path.join("artifacts", "astorb3d.png");
 const rootDir = path.resolve(__dirname, "..");
-
-const contentTypes = {
-    ".html": "text/html",
-    ".js": "application/javascript",
-    ".css": "text/css",
-    ".bin": "application/octet-stream",
-    ".png": "image/png",
-    ".jpg": "image/jpeg",
-    ".jpeg": "image/jpeg",
-    ".gif": "image/gif",
-    ".svg": "image/svg+xml",
-};
-
-const ensureDir = (filePath) =>
-{
-    const dir = path.dirname(filePath);
-    fs.mkdirSync(dir, { recursive: true });
-};
-
-const createServer = () =>
-{
-    const server = http.createServer((req, res) =>
-    {
-        const requestedPath = decodeURIComponent(req.url.split("?")[0]);
-        const safePath = requestedPath === "/" ? "/astorb3d.html" : requestedPath;
-        const filePath = path.join(rootDir, safePath);
-
-        if (!filePath.startsWith(rootDir))
-        {
-            res.writeHead(403);
-            res.end("Forbidden");
-            return;
-        }
-
-        fs.stat(filePath, (err, stat) =>
-        {
-            if (err || !stat.isFile())
-            {
-                res.writeHead(404);
-                res.end("Not found");
-                return;
-            }
-
-            const ext = path.extname(filePath).toLowerCase();
-            res.writeHead(200, { "Content-Type": contentTypes[ext] || "application/octet-stream" });
-            fs.createReadStream(filePath).pipe(res);
-        });
-    });
-
-    return new Promise((resolve) =>
-    {
-        server.listen(0, "127.0.0.1", () =>
-        {
-            const { port } = server.address();
-            resolve({ server, port });
-        });
-    });
-};
+const RENDER_TIMEOUT_MS = 120000;
 
 const captureScreenshot = async () =>
 {
-    const { server, port } = await createServer();
+    const { server, port } = await startStaticServer(rootDir);
     let browser;
-
     try
     {
         browser = await chromium.launch({
             headless: true,
-            args: ["--use-gl=swiftshader", "--enable-webgl", "--disable-dev-shm-usage"],
+            args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
         });
-        const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
-        const url = `http://127.0.0.1:${port}/astorb3d.html`;
-
-        await page.goto(url, { waitUntil: "domcontentloaded" });
-        try
+        const context = await browser.newContext(
+            args.mobile
+                ? { ...devices["iPhone 13 Pro"], deviceScaleFactor: 1 }
+                : {
+                      viewport: {
+                          width: Number(args.width) || 1280,
+                          height: Number(args.height) || 720,
+                      },
+                  }
+        );
+        const page = await context.newPage();
+        const consoleErrors = [];
+        page.on("console", (message) =>
         {
-            await page.waitForFunction(
-                () =>
-                    window.__astorbDataLoaded === true &&
-                    window.__astorbFirstFrameRendered === true,
-                { timeout: 120000 }
-            );
-        }
-        catch (error)
-        {
-            console.error(
-                "Timed out waiting for astorb render, capturing screenshot anyway.",
-                error
-            );
-        }
+            if (message.type() === "error") consoleErrors.push(message.text());
+        });
+        page.on("pageerror", (error) => consoleErrors.push(error.message));
 
-        ensureDir(outputPath);
+        await page.goto(`http://127.0.0.1:${port}/astorb3d.html?${args.query}`, {
+            waitUntil: "domcontentloaded",
+        });
+        // waitForFunction(fn, arg, options): the options object is the THIRD argument.
+        await page.waitForFunction(
+            () => window.__astorbDataLoaded === true && window.__astorbFirstFrameRendered === true,
+            undefined,
+            { timeout: RENDER_TIMEOUT_MS }
+        );
+        // Let a few more frames draw so the status bar and labels settle.
+        await page.waitForTimeout(500);
+
+        fs.mkdirSync(path.dirname(outputPath), { recursive: true });
         await page.screenshot({ path: outputPath, fullPage: true });
         console.log(`Saved screenshot to ${outputPath}`);
+        if (consoleErrors.length)
+        {
+            console.error("Console errors:\n" + consoleErrors.join("\n"));
+            process.exitCode = 1;
+        }
     }
     finally
     {

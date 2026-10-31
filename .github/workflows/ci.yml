@@ -1,0 +1,69 @@
+name: CI
+
+on:
+    pull_request:
+    push:
+        branches: [master]
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+jobs:
+    checks:
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - uses: actions/checkout@v7
+
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: 24
+                  cache: npm
+
+            - run: npm ci
+            - run: npm run lint
+            - run: npm run format:check
+            - run: npm test
+
+            - name: Cache Playwright browsers
+              uses: actions/cache@v6
+              with:
+                  path: ~/.cache/ms-playwright
+                  key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+            - run: npx playwright install --with-deps chromium
+
+            - name: Browser tests (fixture dataset)
+              run: npm run test:e2e
+
+            - name: Smoke screenshots (fixture dataset)
+              run: |
+                  npm run screenshot -- --output artifacts/desktop.png --query "data=tests/fixtures/astorb-fixture.bin&t=0&cam=0,20,12&paused=1"
+                  npm run screenshot -- --mobile --output artifacts/mobile.png --query "data=tests/fixtures/astorb-fixture.bin&t=0&paused=1"
+
+            - uses: actions/upload-artifact@v7
+              if: always()
+              with:
+                  name: smoke-screenshots
+                  path: artifacts/*.png
+                  if-no-files-found: ignore
+
+    build:
+        # Known broken until Phase 8a: Vite can't bundle the classic scripts and doesn't copy
+        # the dataset, so dist/ is incomplete. The audit step proves it; the job may fail.
+        runs-on: ubuntu-latest
+        continue-on-error: true
+        steps:
+            - uses: actions/checkout@v7
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: 24
+                  cache: npm
+            - run: npm ci
+            - run: npm run build
+            - name: Audit dist/ (expected to fail until Phase 8a)
+              run: |
+                  ls -R dist
+                  test -f dist/temp/astorb3d.bin || { echo "dist/ has no dataset"; exit 1; }
+                  test -n "$(ls dist/assets/*.js 2>/dev/null)" || { echo "dist/ has no scripts"; exit 1; }

@@ -1,0 +1,115 @@
+{
+    "format": "astorb3d-v1",
+    "converterVersion": "1.1.0",
+    "recordLayout": {
+        "endianness": "little",
+        "bytesPerRecord": 24,
+        "fields": [
+            "M_deg",
+            "w_deg",
+            "Omega_deg",
+            "i_deg",
+            "e",
+            "a_AU"
+        ]
+    },
+    "recordCount": 19994,
+    "epoch": "2026-09-17",
+    "epochJd": 2461300.5,
+    "referenceFrame": "ecliptic-J2000",
+    "snapshot": {
+        "catalog": "Lowell astorb",
+        "date": "2026-10-30",
+        "url": "https://ftp.lowell.edu/pub/elgb/astorb.dat.gz",
+        "file": "2026-10-30-astorb.dat.gz (sampled)",
+        "bytes": 5358392,
+        "sha256": "57f64abafe98daea60dd5d77d46d712c484fb06e268a26e1f374e27722f35861"
+    },
+    "lines": 19994,
+    "rejected": 0,
+    "propagated": {
+        "count": 0,
+        "maxDays": 0
+    },
+    "classCounts": {
+        "Atira": 40,
+        "Aten": 1503,
+        "Apollo": 1527,
+        "Amor": 1516,
+        "Mars-crosser": 1534,
+        "Hungaria": 1537,
+        "Inner main belt": 419,
+        "Middle main belt": 3072,
+        "Outer main belt": 1549,
+        "Hilda": 1508,
+        "Trojan L4": 1511,
+        "Trojan L5": 1506,
+        "Centaur": 1087,
+        "TNO": 1509,
+        "Other": 176,
+        "Reserved": 0
+    },
+    "bodies": {
+        "Ceres": {
+            "name": "Ceres",
+            "number": 1,
+            "epochJd": 2461300.5,
+            "a": 2.76592189,
+            "e": 0.07975072,
+            "i": 10.587505,
+            "w": 73.20809,
+            "O": 80.248993,
+            "M": 295.937548,
+            "source": "catalog"
+        },
+        "Pluto": {
+            "name": "Pluto",
+            "epochJd": 2461300.5,
+            "a": 38.98343317643071,
+            "e": 0.2469582974562338,
+            "i": 17.26034276424028,
+            "w": 110.9205305593816,
+            "O": 110.4094069529381,
+            "M": 56.1805342513979,
+            "source": "horizons"
+        },
+        "Haumea": {
+            "name": "Haumea",
+            "epochJd": 2461300.5,
+            "a": 43.08367431340073,
+            "e": 0.1939336001591244,
+            "i": 28.20846482180352,
+            "w": 240.5824617811245,
+            "O": 121.7870760618526,
+            "M": 223.6665244366939,
+            "source": "horizons"
+        },
+        "Makemake": {
+            "name": "Makemake",
+            "epochJd": 2461300.5,
+            "a": 45.59278795825656,
+            "e": 0.1583184165776485,
+            "i": 29.02530950328273,
+            "w": 297.0639385054023,
+            "O": 79.30941923856686,
+            "M": 170.2899991632312,
+            "source": "horizons"
+        },
+        "Eris": {
+            "name": "Eris",
+            "epochJd": 2461300.5,
+            "a": 67.90841630553878,
+            "e": 0.4387025079456731,
+            "i": 43.94962950265488,
+            "w": 150.8314176286273,
+            "O": 35.99548739836582,
+            "M": 211.9126228886673,
+            "source": "horizons"
+        }
+    },
+    "fixture": {
+        "sampledFrom": "2026-10-30-astorb.dat.gz",
+        "targetRecords": 20000,
+        "perClassCap": 1500
+    }
+}

@@ -65,21 +65,55 @@
         return Math.max(min, Math.min(max, value));
     };
 
+    // Days per Julian year, and the reachable sim range around the epoch.
+    var DAYS_PER_YEAR = 365.25;
+    var SIM_LIMIT_YEARS = 1000;
+    var PLANET_TABLE_FROM_YEAR = 1800;
+    var PLANET_TABLE_TO_YEAR = 2050;
+
+    // One-line caveat for the status bar, or "" when the sim date is within the comfortable
+    // range. daysFromEpoch: sim date minus epoch, in days; year: the sim date's calendar year.
+    var accuracyNotice = function (daysFromEpoch, year)
+    {
+        var years = Math.abs(Number(daysFromEpoch) || 0) / DAYS_PER_YEAR;
+        if (years >= SIM_LIMIT_YEARS - 1e-9)
+        {
+            return "At the ±1,000-year limit";
+        }
+        if (years > 100)
+        {
+            return "Over 100 years from the epoch: positions are rough";
+        }
+        if (year < PLANET_TABLE_FROM_YEAR || year > PLANET_TABLE_TO_YEAR)
+        {
+            return "Planet positions approximate outside 1800–2050";
+        }
+        return "";
+    };
+
     var buildStatusText = function (input)
     {
         var safe = input || {};
-        var years = Number(safe.simTime || 0) / (365.25 * 24 * 3600);
         var pauseStatus = safe.paused ? "[PAUSED]" : "[RUNNING]";
         var directionLabel = safe.timeScale >= 0 ? "Forward" : "Reverse";
         var asteroidCount = safe.asteroidCount || 0;
         var asteroidDrawCount = safe.asteroidDrawCount || 0;
         var percent = formatAsteroidPercent(asteroidDrawCount, asteroidCount);
+        var when;
+        if (safe.simDate)
+        {
+            when = " Date: " + safe.simDate;
+        }
+        else
+        {
+            var years = Number(safe.simTime || 0) / (DAYS_PER_YEAR * 24 * 3600);
+            when = " Time: " + years.toFixed(2) + " years";
+        }
 
         return (
             pauseStatus +
-            " Time: " +
-            years.toFixed(2) +
-            " years | " +
+            when +
+            " | " +
             "Asteroids: " +
             formatNumber(asteroidDrawCount) +
             " / " +
@@ -91,7 +125,8 @@
             Math.abs(Number(safe.timeScale || 0)).toExponential(1) +
             "x (" +
             directionLabel +
-            ")"
+            ")" +
+            (safe.notice ? " | " + safe.notice : "")
         );
     };
 
@@ -101,6 +136,7 @@
         formatBytes: formatBytes,
         formatBitsPerSecond: formatBitsPerSecond,
         clamp: clamp,
+        accuracyNotice: accuracyNotice,
         buildStatusText: buildStatusText,
     };
 });

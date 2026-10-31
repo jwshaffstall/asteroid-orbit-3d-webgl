@@ -1,0 +1,4 @@
+# Datasets and catalog fixtures must stay byte-exact (checksums, fixed columns).
+*.bin binary
+*.dat -text
+*.dat.gz binary

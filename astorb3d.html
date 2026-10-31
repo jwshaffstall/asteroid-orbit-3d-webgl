@@ -278,6 +278,17 @@
             #shortcutHelp p {
                 margin: 4px 0;
             }
+            #dataCredits {
+                flex: 0 0 auto;
+                font-size: 11px;
+                line-height: 1.4;
+                color: var(--panel-text);
+                opacity: 0.8;
+                padding: 2px 0;
+            }
+            #dataCredits a {
+                color: inherit;
+            }
         </style>
     </head>
     <body onload="astorb.onLoadBody()">
@@ -291,7 +302,7 @@
                 <button id="pauseButton" type="button">Pause</button>
                 <button id="slowButton" type="button">Slow Down</button>
                 <button id="fastButton" type="button">Speed Up</button>
-                <button id="resetTimeButton" type="button">Reset Time</button>
+                <button id="resetTimeButton" type="button">Now</button>
                 <button id="invertTimeButton" type="button">Direction: --</button>
                 <button id="asteroidHalfButton" type="button">Half Asteroids</button>
                 <button id="asteroidDoubleButton" type="button">Double Asteroids</button>
@@ -331,19 +342,40 @@
         <div id="statusDisplay" role="status" aria-live="polite">Status: Loading...</div>
         <details id="shortcutHelp">
             <summary>Keyboard & touch help</summary>
-            <p>Space pause/resume · ↑/↓ speed · 0 reset · C toggle cinematic · R randomize vibe</p>
+            <p>
+                Space pause/resume · ↑/↓ speed · 0 jump to now · C toggle cinematic · R randomize
+                vibe
+            </p>
             <p>Drag to orbit camera, scroll/pinch to zoom.</p>
+            <p>
+                Asteroids move by two-body Kepler motion from the catalog epoch; planets use JPL's
+                approximate elements (fitted for 1800–2050). Moon orbits are illustrative: not in
+                their real planes or phases.
+            </p>
         </details>
+        <footer id="dataCredits">
+            Asteroid data:
+            <a href="https://asteroid.lowell.edu/astorb/">Lowell Observatory astorb</a>
+            (epoch <span id="dataEpoch">--</span>, snapshot <span id="dataSnapshot">--</span>),
+            funded by NASA grant NAG5-4741 (PI E. Bowell), the Lowell Observatory endowment and NASA
+            PDART grant NNX16AG52G (PI N. Moskovitz); please cite
+            <a href="https://doi.org/10.1016/j.ascom.2022.100661">doi:10.1016/j.ascom.2022.100661</a
+            >. Planets:
+            <a href="https://ssd.jpl.nasa.gov/planets/approx_pos.html">JPL approximate elements</a>.
+        </footer>
         <div id="astorbLog"></div>
-        <!-- <script src="scripts/js/libs/sylvester.src.js"></script> -->
-        <!-- <script src="scripts/js/libs/glUtils.js"></script> -->
         <script src="scripts/js/libs/gl-matrix-min.js"></script>
         <script src="scripts/js/libs/stats.min.js"></script>
         <script src="scripts/js/astorb-utils.js"></script>
+        <script src="scripts/js/astorb-astro.js"></script>
         <script src="scripts/js/astorb3d.js"></script>
         <!-- GPU shader programs embedded in the page for easy inspection. -->
         <script type="x-shader/x-vertex" id="shader-vs">
-            precision mediump float; // or lowp
+            // Two-body Kepler motion for every asteroid, on the GPU.
+            // The solver mirrors solveKeplerF32() in scripts/js/astorb-astro.js step for step
+            // (same start value, same iteration count); tests/astorb-astro.test.mjs checks that
+            // mirror against a float64 reference. Keep the two in sync.
+            precision highp float; // mu and time in seconds are outside mediump's range
 
             attribute float aSemimajorAxis;
             attribute float aEccentricity;
@@ -354,7 +386,7 @@
 
             uniform mat4 uMVMatrix;
             uniform mat4 uPMatrix;
-            uniform float time; // seconds
+            uniform float time; // seconds since the epoch
             uniform float uPointSize;
 
             varying float x;
@@ -363,76 +395,40 @@
             varying float vEccentricity;
             varying float vInclination;
             varying float vViewDistance;
-            varying float vMeanMotion;
+            varying float vMeanMotion; // rad/day, so the fragment shader stays in mediump range
             varying float vSemimajorAxis;
             uniform float uOpacity;
 
+            const float pi = 3.1415926535897932384626433832795;
+            const float two_pi = 2.0 * pi;
+            const float deg2rad = pi / 180.0;
+            const float muSun = 3.96401599E-14; // AU^3/s^2 (Gaussian k^2 / 86400^2)
+            const int keplerIterations = 7; // astorbAstro.KEPLER_GPU_ITERATIONS
+
             void main(void)
             {
-                float semimajorAxis = aSemimajorAxis;
-                float eccentricity = aEccentricity;
-                float inclination = aInclination;
-                float argumentOfPerihelion = aArgumentOfPerihelion;
-                float longitudeOfAscendingNode = aLongitudeOfAscendingNode;
-                float meanAnomaly = aMeanAnomaly;
+                float a = aSemimajorAxis;
+                float e = aEccentricity;
+                float i = aInclination * deg2rad;
+                float omega = aArgumentOfPerihelion * deg2rad;
+                float sigma = aLongitudeOfAscendingNode * deg2rad;
+                float M0 = aMeanAnomaly * deg2rad;
 
-                const float pi = 3.1415926535897932384626433832795;
-                const float two_pi = 2.0 * pi;
+                float n = sqrt(muSun / (a * a * a));
 
-                const float deg2rad = pi / 180.0;
+                // Mean anomaly now, reduced to [-pi, pi).
+                float M = mod(n * time + M0 + pi, two_pi) - pi;
 
-                float a = semimajorAxis;
-                float e = eccentricity;
-                float i = inclination * deg2rad;
-                float omega = argumentOfPerihelion * deg2rad;
-                float sigma = longitudeOfAscendingNode * deg2rad;
-                float M0 = meanAnomaly * deg2rad;
-
-                const float standardGravitationalParameterSun = 3.96401599E-14; // AU^3/s^2
-                const float muSun = standardGravitationalParameterSun;
-
-                float a2 = a * a;
-                float a3 = a2 * a;
-                float n = sqrt(muSun / a3);
-
-                // Jupiter resonance adjustments for Trojans/Greeks (1:1) and Hildas (3:2)
-                const float jupiterSemimajorAxis = 5.2044;
-                const float hildaSemimajorAxis = 3.97;
-                float nJ = sqrt(muSun / pow(jupiterSemimajorAxis, 3.0));
-                float trojanWeight = exp(-pow((a - jupiterSemimajorAxis) / 0.35, 2.0));
-                float hildaWeight = exp(-pow((a - hildaSemimajorAxis) / 0.30, 2.0));
-                float nResonant = mix(n, nJ, trojanWeight * 0.20);
-                nResonant = mix(nResonant, (2.0 / 3.0) * nJ, hildaWeight * 0.25);
-
-                float M = mod(nResonant * time + M0, two_pi);
-
-                float omegaBar = omega + sigma;
-                float lambdaJ = mod(nJ * time, two_pi);
-                float lambda = mod(M + omegaBar, two_pi);
-
-                float trojanAngle = mod(lambda - lambdaJ + pi, two_pi) - pi;
-                float trojanTarget = (trojanAngle >= 0.0) ? (pi / 3.0) : (-pi / 3.0);
-                float trojanDelta = trojanAngle - trojanTarget;
-                float trojanLibration = -0.05 * trojanWeight * sin(trojanDelta);
-
-                float hildaAngle = mod(3.0 * lambdaJ - 2.0 * lambda + pi, two_pi) - pi;
-                float hildaLibration = -0.04 * hildaWeight * sin(hildaAngle);
-
-                M = mod(M + trojanLibration + hildaLibration, two_pi);
-
-                float E = M;  // Initialize E with mean anomaly for better convergence
-                const int iterationCount = 10;
-                for (int iteration = 0; iteration < iterationCount; iteration++)
+                // Danby's starting value, then a fixed number of Newton steps.
+                float E = M + 0.85 * e * (sin(M) >= 0.0 ? 1.0 : -1.0);
+                for (int iteration = 0; iteration < keplerIterations; iteration++)
                 {
-                    float sinE = sin(E);
-                    float cosE = cos(E);
-                    E = E - (E - e * sinE - M) / (1.0 - e * cosE);
+                    E = E - (E - e * sin(E) - M) / (1.0 - e * cos(E));
                 }
                 float sinE = sin(E);
                 float cosE = cos(E);
                 float r = a * (1.0 - e * cosE);
-                float sqrtOneMinusESq = sqrt(max(0.0, 1.0 - e * e));
-                float nu = atan(sqrtOneMinusESq * sinE, cosE - e);
+                float nu = atan(sqrt(max(0.0, 1.0 - e * e)) * sinE, cosE - e);
 
                 float theta = omega + nu;
 
@@ -450,15 +446,19 @@
                 vec4 mvPosition = uMVMatrix * vec4(x, y, z, 1.0);
                 gl_Position = uPMatrix * mvPosition;
                 vViewDistance = length(mvPosition.xyz);
-                vEccentricity = eccentricity;
-                vInclination = inclination;
-                vMeanMotion = n;
-                vSemimajorAxis = semimajorAxis;
+                vEccentricity = e;
+                vInclination = aInclination;
+                vMeanMotion = n * 86400.0;
+                vSemimajorAxis = a;
                 gl_PointSize = uPointSize;
             }
         </script>
         <script type="x-shader/x-fragment" id="shader-fs">
-            precision mediump float; // or lowp
+            #ifdef GL_FRAGMENT_PRECISION_HIGH
+            precision highp float;
+            #else
+            precision mediump float;
+            #endif
 
             uniform int uColorMode;
             uniform float uFarPlaneAU;
@@ -512,9 +512,9 @@
                 else if (uColorMode == 3)
                 {
                     // Angular Velocity mode: faster orbits (higher mean motion) = warmer colors
-                    // Mean motion n = sqrt(mu/a^3) in rad/s, higher for closer orbits
-                    // Typical range: ~1e-8 (outer belt) to ~5e-8 (inner belt)
-                    float normalizedVelocity = clamp((vMeanMotion - 1.0e-8) / (4.0e-8), 0.0, 1.0);
+                    // Mean motion n = sqrt(mu/a^3) in rad/day, higher for closer orbits
+                    // Typical range: ~8.6e-4 (outer belt) to ~4.3e-3 (inner belt)
+                    float normalizedVelocity = clamp((vMeanMotion - 8.64e-4) / 3.456e-3, 0.0, 1.0);
 
                     // Use a heat map: slow (blue/purple) -> medium (green/yellow) -> fast (orange/red)
                     vec3 slowColor = vec3(0.2, 0.3, 0.9);    // Blue for slow
@@ -569,7 +569,7 @@
             }
         </script>
         <script type="x-shader/x-vertex" id="shader-bodies-vs">
-            precision mediump float;
+            precision highp float;
 
             attribute vec3 aPosition;
             attribute float aRadius;

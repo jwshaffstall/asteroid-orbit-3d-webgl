@@ -1,18 +1,23 @@
 {
     "name": "astorb3d",
     "version": "1.0.0",
-    "description": "",
-    "main": "index.js",
+    "description": "3D WebGL visualization of 1.5 million asteroid orbits from the Lowell astorb catalog",
     "scripts": {
         "dev": "vite",
         "build": "vite build",
         "preview": "vite preview",
         "test": "node --test",
+        "test:e2e": "node --test --test-concurrency=1 tests/e2e/app.e2e.mjs",
         "screenshot": "node tools/capture-screenshot.js",
         "lint": "oxlint && eslint .",
         "lint:oxc": "oxlint",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
+        "data:fetch": "node tools/fetch-catalog.mjs",
+        "data:build": "node tools/astorb2bin.js -i temp/2026-10-30-astorb.dat.gz -o temp/astorb3d.bin --snapshot-date 2026-10-30",
+        "data:refresh": "node tools/data-refresh.mjs",
+        "data:fixture": "node tools/build-fixture.js -i temp/2026-10-30-astorb.dat.gz -o tests/fixtures/astorb-fixture.bin --snapshot-date 2026-10-30",
+        "data:horizons": "node tools/horizons-fixtures.mjs",
         "generate-qr": "node tools/generate-qr.js"
     },
     "private": true,
@@ -24,13 +29,16 @@
         "@eslint/js": "^10.0.1",
         "eslint": "^10.12.0",
         "eslint-config-prettier": "^10.1.8",
+        "eslint-plugin-oxlint": "^1.90.0",
         "globals": "^17.13.0",
-        "oxfmt": "^0.72.0",
         "oxlint": "^1.87.0",
         "playwright": "^1.64.0",
         "prettier": "^3.9.9",
         "prettier-plugin-brace-style": "^0.10.3",
         "rolldown": "^1.2.13",
         "vite": "^8.3.4"
+    },
+    "engines": {
+        "node": ">=24"
     }
 }

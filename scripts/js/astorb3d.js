@@ -220,7 +220,7 @@ astorb.log = function (inputMessage, inputColor)
             resolvedColor = "#e2e8f0";
         }
         var coloredMessage = message.fontcolor(resolvedColor);
-        logDiv.innerHTML = "" + coloredMessage + "</br>" + logDiv.innerHTML;
+        logDiv.innerHTML = "" + coloredMessage + "<br>" + logDiv.innerHTML;
     }
 };
 
@@ -247,61 +247,169 @@ astorb.cinematicMode = {
     angularVelocity: 0.11,
     zoomAmplitude: 0.08,
 };
+astorb.astro = window.astorbAstro;
+
+// Deterministic URL options, so screenshots and tests render an identical frame every run:
+//   ?t=<seconds since the epoch>  pin the sim date (default: today)
+//   &cam=<azimuth deg>,<elevation deg>,<distance AU>
+//   &color=<color mode index>  &paused=1  &debug=1 (check gl.getError every frame)
+//   &data=<relative path to a .bin dataset> (tests use the small fixture dataset)
+astorb.readUrlOptions = function (search)
+{
+    var options = {};
+    var params = new URLSearchParams(search || "");
+    var number = function (key)
+    {
+        if (!params.has(key)) return undefined;
+        var value = Number(params.get(key));
+        return Number.isFinite(value) ? value : undefined;
+    };
+    options.t = number("t");
+    options.color = number("color");
+    options.paused = params.get("paused") === "1";
+    options.debug = params.get("debug") === "1";
+    if (params.has("cam"))
+    {
+        var parts = params.get("cam").split(",").map(Number);
+        if (parts.length === 3 && parts.every(Number.isFinite))
+        {
+            options.cam = { azimuthDeg: parts[0], elevationDeg: parts[1], distanceAu: parts[2] };
+        }
+    }
+    var data = params.get("data");
+    // Same-origin relative paths only.
+    if (data && /^[\w\-./]+\.bin$/.test(data) && data.indexOf("..") < 0 && data[0] !== "/")
+    {
+        options.data = data;
+    }
+    return options;
+};
+astorb.options = astorb.readUrlOptions(window.location.search);
+
 astorb.onLoadBody = function ()
 {
     var canvas = document.getElementById(astorb.canvasId);
     if (canvas)
     {
-        var gl;
-
-        try
+        if (astorb.options.data)
         {
-            var contextOptions = { antialias: false, depth: true };
-            gl =
-                canvas.getContext("webgl", contextOptions) ||
-                canvas.getContext("experimental-webgl", contextOptions);
-            var initWebGLSuccess = astorb.initWebGL(gl, canvas);
-            if (initWebGLSuccess)
-            {
-                // Keep WebGL sized to the CSS layout.
-                astorb.resizeWebGL();
-
-                if (typeof ResizeObserver !== "undefined")
-                {
-                    astorb._resizeObserver = new ResizeObserver(function ()
-                    {
-                        astorb.resizeWebGL();
-                    });
-                    astorb._resizeObserver.observe(canvas);
-                }
-                else
-                {
-                    window.addEventListener("resize", astorb.resizeWebGL);
-                }
-
-                astorb.setupTimeControls();
-                astorb.setupControlPanelToggle();
-                astorb.setupAsteroidControls();
-                astorb.setupDepthBufferControls();
-                astorb.setupMotionBlurControls();
-                astorb.setupRenderColorControls();
-                astorb.setupPointSizeControls();
-                astorb.setupOrbitLabelControls();
-                astorb.setupThemeControls();
-                astorb.setupCinematicControls();
-                astorb.setupSurpriseControls();
-                astorb.initStats();
-                astorb.loadAstorbData();
-            }
+            astorb.resourcePath = astorb.options.data;
         }
-        catch (exception)
+        // The epoch comes from the dataset's metadata, so load that first (it is tiny).
+        astorb.loadMeta(function ()
         {
-            astorb.log(exception, "yellow");
-        }
+            astorb.startApp(canvas);
+        });
     }
     else
     {
         astorb.log("unable to find canvas element with id '" + astorb.canvasId + "'");
+    }
+};
+
+astorb.startApp = function (canvas)
+{
+    var gl;
+
+    try
+    {
+        var contextOptions = { antialias: false, depth: true };
+        gl =
+            canvas.getContext("webgl", contextOptions) ||
+            canvas.getContext("experimental-webgl", contextOptions);
+        if (gl && !astorb.checkShaderPrecision(gl))
+        {
+            return;
+        }
+        var initWebGLSuccess = astorb.initWebGL(gl, canvas);
+        if (initWebGLSuccess)
+        {
+            // Keep WebGL sized to the CSS layout.
+            astorb.resizeWebGL();
+
+            if (typeof ResizeObserver !== "undefined")
+            {
+                astorb._resizeObserver = new ResizeObserver(function ()
+                {
+                    astorb.resizeWebGL();
+                });
+                astorb._resizeObserver.observe(canvas);
+            }
+            else
+            {
+                window.addEventListener("resize", astorb.resizeWebGL);
+            }
+
+            astorb.setupTimeControls();
+            astorb.setupControlPanelToggle();
+            astorb.setupAsteroidControls();
+            astorb.setupDepthBufferControls();
+            astorb.setupMotionBlurControls();
+            astorb.setupRenderColorControls();
+            astorb.setupPointSizeControls();
+            astorb.setupOrbitLabelControls();
+            astorb.setupThemeControls();
+            astorb.setupCinematicControls();
+            astorb.setupSurpriseControls();
+            astorb.applyUrlOptions();
+            astorb.initStats();
+            astorb.loadAstorbData();
+        }
+    }
+    catch (exception)
+    {
+        astorb.log(exception, "yellow");
+    }
+};
+
+// Orbits need highp floats in the vertex shader; refuse to draw wrong orbits silently.
+astorb.checkShaderPrecision = function (gl)
+{
+    var format = gl.getShaderPrecisionFormat(gl.VERTEX_SHADER, gl.HIGH_FLOAT);
+    if (format && format.precision > 0)
+    {
+        return true;
+    }
+    var message =
+        "This device's GPU lacks high-precision floats in vertex shaders, so asteroid orbits " +
+        "can't be drawn correctly here.";
+    astorb.log(message, "red");
+    var statusDiv = document.getElementById("statusDisplay");
+    if (statusDiv)
+    {
+        statusDiv.textContent = message;
+    }
+    return false;
+};
+
+// Apply ?cam=, ?color= and ?paused= after the controls exist.
+astorb.applyUrlOptions = function ()
+{
+    var options = astorb.options;
+    if (options.cam)
+    {
+        astorb.camera.azimuth = (options.cam.azimuthDeg * Math.PI) / 180;
+        astorb.camera.elevation = (options.cam.elevationDeg * Math.PI) / 180;
+        astorb.camera.distance = Math.max(
+            astorb.camera.minDistance,
+            Math.min(astorb.camera.maxDistance, options.cam.distanceAu)
+        );
+        astorb.updateViewMatrix();
+    }
+    if (options.color !== undefined)
+    {
+        var index = Math.floor(options.color);
+        if (index >= 0 && index < astorb.colorModes.length)
+        {
+            astorb.colorModeIndex = index;
+            astorb.applyColorMode();
+            astorb.refreshRenderColorControls();
+        }
+    }
+    if (options.paused)
+    {
+        astorb.time.paused = true;
+        astorb.refreshTimeControls();
     }
 };
 
@@ -507,6 +615,98 @@ astorb.getShader = function (gl, shaderId)
 };
 
 astorb.resourcePath = "temp/astorb3d.bin";
+
+// Epoch of the shipped Oct 2026 snapshot; used only if its metadata can't be loaded.
+astorb.fallbackEpochJd = 2461300.5;
+
+astorb.metaPathFor = function (binPath)
+{
+    return binPath.replace(/\.bin$/i, ".meta.json");
+};
+
+// Load <dataset>.meta.json (epoch, snapshot, body elements), then call done().
+astorb.loadMeta = function (done)
+{
+    var metaPath = astorb.metaPathFor(astorb.resourcePath);
+    var finish = function (meta)
+    {
+        astorb.applyMeta(meta);
+        done();
+    };
+    if (typeof fetch !== "function")
+    {
+        finish(null);
+        return;
+    }
+    fetch(metaPath, { cache: "no-cache" })
+        .then(function (response)
+        {
+            if (!response.ok)
+            {
+                throw new Error("HTTP " + response.status);
+            }
+            return response.json();
+        })
+        .then(finish)
+        .catch(function (error)
+        {
+            astorb.log("could not load '" + metaPath + "' (" + error.message + ")", "red");
+            finish(null);
+        });
+};
+
+astorb.applyMeta = function (meta)
+{
+    var astro = astorb.astro;
+    var valid = meta && Number.isFinite(meta.epochJd);
+    if (!valid)
+    {
+        astorb.log(
+            "dataset epoch unknown; assuming " + astro.isoDateFromJd(astorb.fallbackEpochJd),
+            "red"
+        );
+    }
+    astorb.meta = valid ? meta : null;
+    astorb.epoch.jd = valid ? meta.epochJd : astorb.fallbackEpochJd;
+    astorb.buildPlanetOrbits(astorb.epoch.jd);
+    astorb.buildDwarfPlanetOrbits(valid ? meta.bodies : null);
+
+    // Open at today's date unless ?t= pins the sim date (seconds since the epoch).
+    if (astorb.options.t !== undefined)
+    {
+        astorb.time.simTime = astorb.options.t;
+    }
+    else
+    {
+        var nowJd = astro.jdFromUnixMs(Date.now());
+        astorb.time.simTime = (nowJd - astorb.epoch.jd) * astro.SECONDS_PER_DAY;
+    }
+    astorb.clampSimTime();
+
+    var epochLabel = document.getElementById("dataEpoch");
+    if (epochLabel)
+    {
+        epochLabel.textContent = astro.isoDateFromJd(astorb.epoch.jd);
+    }
+    var snapshotLabel = document.getElementById("dataSnapshot");
+    if (snapshotLabel)
+    {
+        snapshotLabel.textContent = (valid && meta.snapshot && meta.snapshot.date) || "--";
+    }
+    if (valid)
+    {
+        astorb.log(
+            "dataset: " +
+                astorb.formatNumber(meta.recordCount) +
+                " asteroids, epoch " +
+                meta.epoch +
+                ", snapshot " +
+                ((meta.snapshot && meta.snapshot.date) || "--"),
+            "blue"
+        );
+    }
+};
+
 astorb.loadAstorbData = function ()
 {
     var resourcePath = astorb.resourcePath;
@@ -531,19 +731,24 @@ astorb.Loader = function (path, inputCallback, inputProgressCallback)
     var request = new XMLHttpRequest();
     this.request = request;
 
-    request.open("GET", path, true);
-    request.responseType = "arraybuffer";
-    request.onreadystatechange = function ()
+    // onload, onerror and ontimeout can each fire for one request; settle exactly once.
+    var settled = false;
+    var settle = function (errorCode, response)
     {
-        if (request.readyState === 4)
-        {
-            var errorCode = request.status;
-            var response = request.response;
-            callback(errorCode, response);
-        }
+        if (settled) return;
+        settled = true;
+        callback(errorCode, response);
     };
 
-    request.timeout = 45000;
+    request.open("GET", path, true);
+    request.responseType = "arraybuffer";
+    // The full catalog is ~38 MB; allow slow connections plenty of time.
+    request.timeout = 300000;
+
+    request.onload = function ()
+    {
+        settle(request.status, request.response);
+    };
 
     request.onprogress = function (event)
     {
@@ -553,12 +758,12 @@ astorb.Loader = function (path, inputCallback, inputProgressCallback)
 
     request.onerror = function ()
     {
-        callback(request.status || 0, null);
+        settle(request.status || 0, null);
     };
 
     request.ontimeout = function ()
     {
-        callback(408, null);
+        settle(408, null);
     };
 
     request.send();
@@ -567,6 +772,20 @@ astorb.Loader = function (path, inputCallback, inputProgressCallback)
 // Convert binary orbital elements into GPU buffers and kick off animation.
 astorb.onLoadAstorbData = function (errorCode, response)
 {
+    var bytesPerRecord = 24;
+    if (
+        errorCode == 200 &&
+        response &&
+        response instanceof ArrayBuffer &&
+        response.byteLength % bytesPerRecord !== 0
+    )
+    {
+        astorb.log(
+            "dataset is " + response.byteLength + " bytes, not a whole number of records",
+            "red"
+        );
+        errorCode = 0;
+    }
     if (errorCode == 200 && response && response instanceof ArrayBuffer)
     {
         astorb.log("loaded astorb data", "green");
@@ -577,12 +796,13 @@ astorb.onLoadAstorbData = function (errorCode, response)
         var gl = astorb.gl;
 
         var astorbFloats = new Float32Array(response);
-        var astorbFloatCount = astorbFloats.length;
-        var floatsPerAsteroid = 6;
-        var asteroidCount = astorbFloatCount / floatsPerAsteroid;
-        astorb.log("asteroid count = " + asteroidCount, "black");
+        var asteroidCount = response.byteLength / bytesPerRecord;
+        astorb.log("asteroid count = " + astorb.formatNumber(asteroidCount), "black");
+        if (astorb.meta && astorb.meta.recordCount !== asteroidCount)
+        {
+            astorb.log("warning: metadata says " + astorb.meta.recordCount + " records", "red");
+        }
         astorb.asteroidCount = asteroidCount;
-        astorb.asteroidDrawStride = 1;
         astorb.asteroidDrawCount = asteroidCount;
         astorb.refreshAsteroidControls();
 
@@ -612,7 +832,7 @@ astorb.onLoadAstorbData = function (errorCode, response)
         gl.bufferData(gl.ARRAY_BUFFER, astorbFloats, gl.STATIC_DRAW);
         astorb.astorbBuffer = astorbBuffer;
 
-        astorb.configureAttributePointers(gl, 1);
+        astorb.configureAttributePointers(gl);
 
         astorb.frameCount = 0;
         requestAnimationFrame(astorb.animate);
@@ -640,28 +860,39 @@ astorb.camera = {
     lastMouseY: 0,
 };
 
-// Epoch configuration:
-// - planetEpochMs: epoch (J2000.0) used for planetary orbital elements, expressed as UTC milliseconds.
-// - asteroidEpochMs: epoch of the asteroid orbital elements catalog (October 15, 2013, 12:00 UTC).
-// These values are used so that planetary positions (computed from J2000.0 elements) can be
-// shifted to the asteroid elements epoch, ensuring all bodies start the simulation at the same
-// reference time.
+// The epoch is the instant the dataset's orbital elements describe (from its .meta.json).
+// It is the internal time origin: simTime is seconds since the epoch, and the sim date is
+// epoch + simTime. The app opens at today's date (see applyMeta).
 astorb.epoch = {
-    planetEpochMs: Date.UTC(2000, 0, 1, 12, 0, 0),
-    asteroidEpochMs: Date.UTC(2013, 9, 15, 12, 0, 0),
+    jd: null,
 };
-
-// Time offset (in seconds) between the planetary J2000.0 epoch and the asteroid elements epoch.
-// This is applied when computing planetary positions so they are aligned with the asteroid epoch
-// when the simulation starts.
-astorb.planetEpochOffsetSec = (astorb.epoch.asteroidEpochMs - astorb.epoch.planetEpochMs) / 1000.0;
 
 // Time control
 astorb.time = {
-    simTime: 0, // Simulation time in seconds
-    timeScale: 1000000, // Speed multiplier (1 million = ~1 year per 30 seconds)
+    simTime: 0, // seconds since the epoch
+    timeScale: 1000000, // speed multiplier (10^6 = ~11.6 days per second)
     lastTimestamp: 0,
     paused: false,
+};
+
+// Two-body drift and float32 phase error grow with time, so the reachable range is limited.
+astorb.simTimeLimitSeconds = 1000 * 365.25 * 86400;
+astorb.clampSimTime = function ()
+{
+    var limit = astorb.simTimeLimitSeconds;
+    astorb.time.simTime = Math.max(-limit, Math.min(limit, astorb.time.simTime));
+};
+
+// Julian Date the scene is showing.
+astorb.simJd = function ()
+{
+    return astorb.epoch.jd + astorb.time.simTime / 86400;
+};
+
+// Seconds since the epoch for "now".
+astorb.nowSimTime = function ()
+{
+    return (astorb.astro.jdFromUnixMs(Date.now()) - astorb.epoch.jd) * 86400;
 };
 
 astorb.motionBlur = {
@@ -677,7 +908,6 @@ astorb.firstFrameRendered = false;
 window.__astorbDataLoaded = false;
 window.__astorbFirstFrameRendered = false;
 astorb.asteroidDrawCount = 0;
-astorb.asteroidDrawStride = 1;
 
 astorb.initBuffers = function (gl)
 {
@@ -748,15 +978,14 @@ astorb.initBuffers = function (gl)
     astorb.updateViewMatrix();
 };
 
-astorb.configureAttributePointers = function (gl, strideMultiplier)
+astorb.configureAttributePointers = function (gl)
 {
-    // Each asteroid uses 6 floats: M, w, Ω, i, e, a (matching shader attributes).
+    // Each asteroid uses 6 floats: M, w, Ω, i, e, a (matching shader attributes). The stride
+    // is always one record: density is controlled by the draw count, never by the stride
+    // (WebGL caps strides at 255 bytes).
     var bytesPerFloat = 4;
     var floatsPerVertex = 6;
-    var strideFactor = strideMultiplier || 1;
-    var baseStride = floatsPerVertex * bytesPerFloat;
-    var floatStride = baseStride * strideFactor;
-    astorb.attributeStride = floatStride;
+    var floatStride = floatsPerVertex * bytesPerFloat;
 
     if (astorb.aMeanAnomaly >= 0)
     {
@@ -791,88 +1020,53 @@ astorb.configureAttributePointers = function (gl, strideMultiplier)
     }
 };
 
-astorb.planetOrbits = [
+// Planet orbits (for orbit lines and labels) are the Standish elements at the epoch; planet
+// positions are recomputed for the sim date every frame (see updateBodies).
+astorb.planetOrbits = [];
+astorb.buildPlanetOrbits = function (epochJd)
+{
+    var astro = astorb.astro;
+    astorb.planetOrbits = astro.PLANET_NAMES.map(function (name)
     {
-        name: "Mercury",
-        a: 0.38709927,
-        e: 0.20563593,
-        i: 7.00497902,
-        w: 29.12703035,
-        O: 48.33076593,
-        M: 174.795884,
-    },
-    {
-        name: "Venus",
-        a: 0.72333566,
-        e: 0.00677672,
-        i: 3.39467605,
-        w: 54.92262463,
-        O: 76.67984255,
-        M: 50.416113,
-    },
-    {
-        name: "Earth",
-        a: 1.00000261,
-        e: 0.01671123,
-        i: -0.00001531,
-        w: 102.93768193,
-        O: -11.26064,
-        M: 100.464571,
-    },
-    {
-        name: "Mars",
-        a: 1.52371034,
-        e: 0.0933941,
-        i: 1.84969142,
-        w: 286.537,
-        O: 49.55953891,
-        M: 19.412,
-    },
-    {
-        name: "Jupiter",
-        a: 5.202887,
-        e: 0.04838624,
-        i: 1.30439695,
-        w: 273.867,
-        O: 100.47390909,
-        M: 20.02,
-    },
-    {
-        name: "Saturn",
-        a: 9.53667594,
-        e: 0.05386179,
-        i: 2.48599187,
-        w: 339.392,
-        O: 113.66242448,
-        M: 317.02,
-    },
-    {
-        name: "Uranus",
-        a: 19.18916464,
-        e: 0.04725744,
-        i: 0.77263783,
-        w: 96.998857,
-        O: 74.01692503,
-        M: 142.2386,
-    },
-    {
-        name: "Neptune",
-        a: 30.06992276,
-        e: 0.00859048,
-        i: 1.77004347,
-        w: 273.187,
-        O: 131.78422574,
-        M: 256.228,
-    },
-];
+        var elements = astro.planetElementsAt(name, epochJd);
+        elements.name = name;
+        return elements;
+    });
+};
 
-astorb.dwarfPlanetOrbits = [
+// Dwarf planets: Ceres from its own catalog row, Pluto, Haumea, Makemake and Eris from
+// Horizons elements at the epoch (tools/horizons-fixtures.mjs), both via the dataset metadata.
+// The values below are only a fallback if the metadata is missing; they are approximate.
+astorb.dwarfPlanetNames = ["Ceres", "Pluto", "Haumea", "Makemake", "Eris"];
+astorb.fallbackDwarfPlanetOrbits = [
     { name: "Ceres", a: 2.7675, e: 0.0758, i: 10.594, w: 73.5977, O: 80.3055, M: 95.989 },
     { name: "Pluto", a: 39.482, e: 0.2488, i: 17.14, w: 113.763, O: 110.299, M: 14.53 },
     { name: "Haumea", a: 43.218, e: 0.191, i: 28.19, w: 240.6, O: 121.9, M: 205.1 },
     { name: "Makemake", a: 45.436, e: 0.161, i: 28.98, w: 294.8, O: 79.6, M: 92.3 },
     { name: "Eris", a: 67.781, e: 0.44, i: 44.04, w: 151.6, O: 35.95, M: 204.4 },
 ];
+astorb.dwarfPlanetOrbits = astorb.fallbackDwarfPlanetOrbits;
+astorb.buildDwarfPlanetOrbits = function (bodies)
+{
+    astorb.dwarfPlanetOrbits = astorb.dwarfPlanetNames.map(function (name, index)
+    {
+        var body = bodies && bodies[name];
+        if (!body)
+        {
+            return astorb.fallbackDwarfPlanetOrbits[index];
+        }
+        return {
+            name: name,
+            a: body.a,
+            e: body.e,
+            i: body.i,
+            w: body.w,
+            O: body.O,
+            M: body.M,
+            epochJd: body.epochJd,
+        };
+    });
+};
 
 astorb.constants = {
     auKm: 149597870.7,
@@ -1063,73 +1257,21 @@ astorb.getScaledRadiusAu = function (radiusKm, sizeScale)
     return (scaledKm * scale) / astorb.constants.auKm;
 };
 
+// Position of a dwarf planet (elements at its own epoch, normally the dataset epoch) at the
+// current sim time, using the shared, tested solver in astorb-astro.js.
 astorb.computeKeplerPosition = function (orbit, timeSec)
 {
-    // Adjust time so planet positions (using J2000.0 orbital elements) align with the asteroid epoch (2013-10-15),
-    // ensuring all bodies are computed for the same reference time.
-    var adjustedTimeSec = timeSec + astorb.planetEpochOffsetSec;
-    var deg2rad = Math.PI / 180.0;
-    var a = orbit.a;
-    var e = orbit.e;
-    var i = orbit.i * deg2rad;
-    var omega = orbit.w * deg2rad;
-    var sigma = orbit.O * deg2rad;
-    var M0 = orbit.M * deg2rad;
-    var muSun = astorb.constants.muSun;
-
-    var n = Math.sqrt(muSun / Math.pow(a, 3.0));
-    var M = (n * adjustedTimeSec + M0) % (2.0 * Math.PI);
-
-    var E = M;
-    for (var iteration = 0; iteration < 30; iteration++)
-    {
-        E = E - (E - e * Math.sin(E) - M) / (1.0 - e * Math.cos(E));
-    }
-    var r = a * (1.0 - e * Math.cos(E));
-    var nu =
-        2.0 *
-        Math.atan2(Math.sqrt(1.0 + e) * Math.sin(E / 2.0), Math.sqrt(1.0 - e) * Math.cos(E / 2.0));
-
-    var theta = omega + nu;
-
-    var x =
-        r * (Math.cos(sigma) * Math.cos(theta) - Math.sin(sigma) * Math.sin(theta) * Math.cos(i));
-    var y =
-        r * (Math.sin(sigma) * Math.cos(theta) + Math.cos(sigma) * Math.sin(theta) * Math.cos(i));
-    var z = r * (Math.sin(i) * Math.sin(theta));
-
-    return [x, y, z];
+    var epochOffsetSec = orbit.epochJd ? (astorb.epoch.jd - orbit.epochJd) * 86400 : 0;
+    return astorb.astro.keplerPosition(orbit, timeSec + epochOffsetSec);
 };
 
+// A point on an orbit at a given mean anomaly (degrees); used for orbit labels.
 astorb.computeOrbitPoint = function (orbit, meanAnomalyDeg)
 {
-    var deg2rad = Math.PI / 180.0;
-    var a = orbit.a;
-    var e = orbit.e;
-    var i = orbit.i * deg2rad;
-    var omega = orbit.w * deg2rad;
-    var sigma = orbit.O * deg2rad;
-    var M = meanAnomalyDeg * deg2rad;
-
-    var E = M;
-    for (var iteration = 0; iteration < 30; iteration++)
-    {
-        E = E - (E - e * Math.sin(E) - M) / (1.0 - e * Math.cos(E));
-    }
-    var r = a * (1.0 - e * Math.cos(E));
-    var nu =
-        2.0 *
-        Math.atan2(Math.sqrt(1.0 + e) * Math.sin(E / 2.0), Math.sqrt(1.0 - e) * Math.cos(E / 2.0));
-
-    var theta = omega + nu;
-
-    var x =
-        r * (Math.cos(sigma) * Math.cos(theta) - Math.sin(sigma) * Math.sin(theta) * Math.cos(i));
-    var y =
-        r * (Math.sin(sigma) * Math.cos(theta) + Math.cos(sigma) * Math.sin(theta) * Math.cos(i));
-    var z = r * (Math.sin(i) * Math.sin(theta));
-
-    return [x, y, z];
+    return astorb.astro.keplerPosition(
+        { a: orbit.a, e: orbit.e, i: orbit.i, w: orbit.w, O: orbit.O, M: meanAnomalyDeg },
+        0
+    );
 };
 
 astorb.initOrbitLabels = function ()
@@ -1292,11 +1434,12 @@ astorb.updateBodies = function (timeSec)
     bodyData[cursor++] = astorb.bodies[0].color[2];
     positions["Sun"] = [0.0, 0.0, 0.0];
 
+    // Planets: Standish elements and rates evaluated at the sim date (float64, in JS).
+    var simJd = astorb.epoch.jd + timeSec / 86400;
     for (var planetIndex = 0; planetIndex < astorb.planetBodies.length; planetIndex++)
     {
         var planet = astorb.planetBodies[planetIndex];
-        var orbit = astorb.planetOrbits[planetIndex];
-        var position = astorb.computeKeplerPosition(orbit, timeSec);
+        var position = astorb.astro.planetPosition(planet.name, simJd);
         positions[planet.name] = position;
 
         bodyData[cursor++] = position[0];
@@ -1359,12 +1502,9 @@ astorb.setupCameraControls = function (canvas)
     });
 
     // Mouse up - stop dragging
-    window.addEventListener("mouseup", function (event)
+    window.addEventListener("mouseup", function ()
     {
-        if (event)
-        {
-            camera.isDragging = false;
-        }
+        camera.isDragging = false;
     });
 
     // Mouse move - rotate camera
@@ -1499,10 +1639,35 @@ astorb.setupCameraControls = function (canvas)
         event.preventDefault();
     });
 
-    // Keyboard controls - listen on both canvas and window
+    // Keyboard controls. One listener on window: a canvas listener as well would see every key
+    // twice when the canvas has focus (keydown bubbles to window).
+    var isEditableTarget = function (target)
+    {
+        if (!target || !target.tagName) return false;
+        var tag = target.tagName.toLowerCase();
+        return (
+            tag === "button" ||
+            tag === "input" ||
+            tag === "select" ||
+            tag === "textarea" ||
+            tag === "summary" ||
+            target.isContentEditable === true
+        );
+    };
     var handleKeydown = function (event)
     {
         var time = astorb.time;
+        // Let focused controls keep their own keys (Space/Enter activate buttons).
+        if (isEditableTarget(event.target) || event.ctrlKey || event.metaKey || event.altKey)
+        {
+            return;
+        }
+        // Toggles fire once per press, not on auto-repeat.
+        if (event.repeat && (event.key === " " || /^[cCrR0oO]$/.test(event.key)))
+        {
+            event.preventDefault();
+            return;
+        }
         switch (event.key)
         {
             case " ": // Space - pause/resume
@@ -1523,11 +1688,10 @@ astorb.setupCameraControls = function (canvas)
                 astorb.refreshTimeControls();
                 event.preventDefault();
                 break;
-            case "0": // Reset time to 0
+            case "0": // Jump to now
             case "o":
             case "O":
-                time.simTime = 0;
-                astorb.log("Time reset to 0", "blue");
+                astorb.jumpToNow();
                 event.preventDefault();
                 break;
             case "c":
@@ -1543,14 +1707,20 @@ astorb.setupCameraControls = function (canvas)
         }
     };
 
-    canvas.addEventListener("keydown", handleKeydown);
     window.addEventListener("keydown", handleKeydown);
 
     astorb.log(
-        "Controls: Drag to rotate, Scroll/pinch to zoom, Space=pause, Up/Down=speed, 0/O=reset time",
+        "Controls: Drag to rotate, Scroll/pinch to zoom, Space=pause, Up/Down=speed, 0/O=now",
         "green"
     );
-    astorb.log("Click on canvas first to enable keyboard controls", "green");
+};
+
+astorb.jumpToNow = function ()
+{
+    astorb.time.simTime = astorb.nowSimTime();
+    astorb.clampSimTime();
+    astorb.log("Sim date set to now", "blue");
+    astorb.refreshTimeControls();
 };
 
 astorb.setupTimeControls = function ()
@@ -1595,9 +1765,7 @@ astorb.setupTimeControls = function ()
     {
         resetButton.addEventListener("click", function ()
         {
-            astorb.time.simTime = 0;
-            astorb.log("Time reset to 0", "blue");
-            astorb.refreshTimeControls();
+            astorb.jumpToNow();
         });
     }
 
@@ -1668,37 +1836,32 @@ astorb.setupControlPanelToggle = function ()
     refreshForViewport();
 };
 
+// Density control: draw a prefix of the dataset (drawArrays(0, n)) at the normal stride.
+// Halving the count instead of doubling the stride keeps every draw valid in WebGL.
 astorb.setupAsteroidControls = function ()
 {
     var halfButton = document.getElementById("asteroidHalfButton");
     var doubleButton = document.getElementById("asteroidDoubleButton");
 
-    astorb.updateAsteroidDrawSettings = function ()
+    var logCount = function ()
     {
-        var total = astorb.asteroidCount || 0;
-        var stride = astorb.asteroidDrawStride || 1;
-        astorb.asteroidDrawCount = total ? Math.ceil(total / stride) : 0;
+        astorb.log(
+            "Asteroid draw count: " +
+                astorb.formatNumber(astorb.asteroidDrawCount) +
+                " / " +
+                astorb.formatNumber(astorb.asteroidCount || 0),
+            "blue"
+        );
+        astorb.refreshAsteroidControls();
     };
 
     if (halfButton)
     {
         halfButton.addEventListener("click", function ()
         {
-            var total = astorb.asteroidCount || 0;
-            if (!total) return;
-            var stride = astorb.asteroidDrawStride || 1;
-            var nextStride = Math.min(total, stride * 2);
-            astorb.asteroidDrawStride = nextStride;
-            astorb.updateAsteroidDrawSettings();
-            var nextCount = astorb.asteroidDrawCount;
-            astorb.log(
-                "Asteroid draw count: " +
-                    astorb.formatNumber(nextCount) +
-                    " / " +
-                    astorb.formatNumber(total),
-                "blue"
-            );
-            astorb.refreshAsteroidControls();
+            if (!astorb.asteroidCount) return;
+            astorb.asteroidDrawCount = Math.max(1, Math.ceil(astorb.asteroidDrawCount / 2));
+            logCount();
         });
     }
 
@@ -1708,23 +1871,11 @@ astorb.setupAsteroidControls = function ()
         {
             var total = astorb.asteroidCount || 0;
             if (!total) return;
-            var stride = astorb.asteroidDrawStride || 1;
-            var nextStride = Math.max(1, Math.floor(stride / 2));
-            astorb.asteroidDrawStride = nextStride;
-            astorb.updateAsteroidDrawSettings();
-            var nextCount = astorb.asteroidDrawCount;
-            astorb.log(
-                "Asteroid draw count: " +
-                    astorb.formatNumber(nextCount) +
-                    " / " +
-                    astorb.formatNumber(total),
-                "blue"
-            );
-            astorb.refreshAsteroidControls();
+            astorb.asteroidDrawCount = Math.min(total, astorb.asteroidDrawCount * 2);
+            logCount();
         });
     }
 
-    astorb.updateAsteroidDrawSettings();
     astorb.refreshAsteroidControls();
 };
 
@@ -1827,11 +1978,6 @@ astorb.setupPointSizeControls = function ()
         {
             astorb.pointSizeIndex = (astorb.pointSizeIndex + 1) % astorb.pointSizes.length;
             astorb.pointSize = astorb.pointSizes[astorb.pointSizeIndex];
-            astorb.cinematicMode = {
-                enabled: false,
-                angularVelocity: 0.11,
-                zoomAmplitude: 0.08,
-            };
             astorb.applyPointSize();
             astorb.refreshPointSizeControls();
         });
@@ -2237,7 +2383,9 @@ astorb.animate = function (timestamp)
     {
         time.lastTimestamp = timestamp;
     }
-    var deltaTime = (timestamp - time.lastTimestamp) / 1000.0; // Convert to seconds
+    // Wall-clock seconds since the last frame, clamped so returning to a background tab
+    // doesn't jump the simulation by minutes x timeScale.
+    var deltaTime = Math.min(0.1, Math.max(0, (timestamp - time.lastTimestamp) / 1000.0));
     time.lastTimestamp = timestamp;
     var simDelta = 0;
 
@@ -2246,6 +2394,7 @@ astorb.animate = function (timestamp)
     {
         simDelta = deltaTime * time.timeScale;
         time.simTime += simDelta;
+        astorb.clampSimTime();
     }
 
     if (astorb.cinematicMode.enabled)
@@ -2278,9 +2427,16 @@ astorb.animate = function (timestamp)
         var statusDiv = document.getElementById("statusDisplay");
         if (statusDiv)
         {
+            var simJd = astorb.simJd();
             statusDiv.textContent = astorb.utils.buildStatusText
                 ? astorb.utils.buildStatusText({
-                      simTime: time.simTime,
+                      simDate: astorb.astro.isoDateFromJd(simJd),
+                      notice: astorb.utils.accuracyNotice
+                          ? astorb.utils.accuracyNotice(
+                                time.simTime / 86400,
+                                astorb.astro.yearFromJd(simJd)
+                            )
+                          : "",
                       paused: time.paused,
                       timeScale: time.timeScale,
                       asteroidCount: asteroidCount,
@@ -2290,18 +2446,13 @@ astorb.animate = function (timestamp)
         }
     }
 
-    // Log time every 300 frames for debugging
-    // if (astorb.frameCount % 300 === 0) {
-    //     astorb.log("Frame " + astorb.frameCount + ", simTime=" + time.simTime.toExponential(2), "gray");
-    // }
-
     // Render
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     if (astorb.planetOrbitBuffer)
     {
         gl.useProgram(astorb.asteroidProgram);
         gl.bindBuffer(gl.ARRAY_BUFFER, astorb.planetOrbitBuffer);
-        astorb.configureAttributePointers(gl, 1);
+        astorb.configureAttributePointers(gl);
         gl.uniform1f(astorb.timeUniform, 0);
         if (astorb.opacityUniform !== null)
         {
@@ -2319,7 +2470,7 @@ astorb.animate = function (timestamp)
     {
         gl.useProgram(astorb.asteroidProgram);
         gl.bindBuffer(gl.ARRAY_BUFFER, astorb.dwarfPlanetOrbitBuffer);
-        astorb.configureAttributePointers(gl, 1);
+        astorb.configureAttributePointers(gl);
         gl.uniform1f(astorb.timeUniform, 0);
         if (astorb.opacityUniform !== null)
         {
@@ -2344,12 +2495,16 @@ astorb.animate = function (timestamp)
 
         var bodyAttributes = astorb.bodyAttributes;
         var stride = 7 * 4;
-        gl.enableVertexAttribArray(bodyAttributes.position);
-        gl.enableVertexAttribArray(bodyAttributes.radius);
-        gl.enableVertexAttribArray(bodyAttributes.color);
-        gl.vertexAttribPointer(bodyAttributes.position, 3, gl.FLOAT, false, stride, 0);
-        gl.vertexAttribPointer(bodyAttributes.radius, 1, gl.FLOAT, false, stride, 12);
-        gl.vertexAttribPointer(bodyAttributes.color, 3, gl.FLOAT, false, stride, 16);
+        // A location of -1 means the attribute was optimized away; never enable it.
+        var bindBodyAttribute = function (location, size, offset)
+        {
+            if (location < 0) return;
+            gl.enableVertexAttribArray(location);
+            gl.vertexAttribPointer(location, size, gl.FLOAT, false, stride, offset);
+        };
+        bindBodyAttribute(bodyAttributes.position, 3, 0);
+        bindBodyAttribute(bodyAttributes.radius, 1, 12);
+        bindBodyAttribute(bodyAttributes.color, 3, 16);
         gl.uniform1f(astorb.bodyUniforms.pointScale, astorb.bodyScale);
         if (astorb.bodyUniforms.opacity !== null)
         {
@@ -2361,7 +2516,9 @@ astorb.animate = function (timestamp)
 
     gl.useProgram(astorb.asteroidProgram);
     gl.bindBuffer(gl.ARRAY_BUFFER, astorb.astorbBuffer);
-    astorb.configureAttributePointers(gl, astorb.asteroidDrawStride || 1);
+    astorb.configureAttributePointers(gl);
+    // Additive blending: depth writes would make the result depend on draw order.
+    gl.depthMask(false);
     var blurSamples = motionBlur.enabled ? motionBlur.sampleCount : 1;
     var blurSpan = 0;
     if (motionBlur.enabled && blurSamples > 1)
@@ -2389,6 +2546,24 @@ astorb.animate = function (timestamp)
             gl.uniform1f(astorb.opacityUniform, opacity);
         }
         gl.drawArrays(gl.POINTS, 0, asteroidDrawCount);
+    }
+    if (astorb.depthBufferEnabled)
+    {
+        gl.depthMask(true);
+    }
+
+    // ?debug=1: count GL errors (getError stalls the pipeline, so only when asked).
+    if (astorb.options.debug)
+    {
+        var glError = gl.getError();
+        if (glError !== gl.NO_ERROR)
+        {
+            window.__astorbGlErrors = (window.__astorbGlErrors || 0) + 1;
+            if (window.__astorbGlErrors <= 5)
+            {
+                astorb.log("WebGL error 0x" + glError.toString(16), "red");
+            }
+        }
     }
 
     if (!astorb.firstFrameRendered && astorb.dataLoaded)

@@ -1,0 +1,36 @@
+name: Full catalog (on demand)
+
+# Run by hand before each release and after each data refresh. There is no schedule.
+on:
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+jobs:
+    full-catalog:
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
+        steps:
+            - uses: actions/checkout@v7
+
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: 24
+                  cache: npm
+
+            - run: npm ci
+            - run: npx playwright install --with-deps chromium
+
+            - name: Full-catalog screenshots
+              run: |
+                  npm run screenshot -- --output artifacts/full-desktop.png --query "t=0&cam=0,20,12&paused=1"
+                  npm run screenshot -- --output artifacts/full-top-down.png --query "t=0&cam=0,80,8&paused=1&color=4"
+                  npm run screenshot -- --mobile --output artifacts/full-mobile.png --query "t=0&paused=1"
+
+            - uses: actions/upload-artifact@v7
+              if: always()
+              with:
+                  name: full-catalog-screenshots
+                  path: artifacts/*.png
+                  if-no-files-found: ignore

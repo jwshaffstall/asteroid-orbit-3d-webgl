@@ -1,7 +1,10 @@
 node_modules
 temp
+dist
+artifacts
 package-lock.json
 astorb/*.txt
 scripts/js/libs/
-# package.json
-package-lock.json
+tests/fixtures/
+# Archived plans are kept verbatim.
+plans/archive/

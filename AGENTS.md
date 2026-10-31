@@ -1,23 +1,23 @@
 # AI Agent Guidelines (AGENTS.md)
 
-Welcome to the **astorb3d** repository. This guide outline conventions and practices for AI developer agents collaborating on this codebase.
+Welcome to the **astorb3d** repository. This guide outlines conventions and practices for AI developer agents collaborating on this codebase. Start with [project_context.md](project_context.md) (map and commands), [GLOSSARY.md](GLOSSARY.md) (terms) and [docs/adr/](docs/adr/) (decisions). The roadmap is [plans/plan-integrated.md](plans/plan-integrated.md).
 
 ## Core Rules for Agents
 
-1. **Do Not Overcomplicate Styling**:
-    - The UI is styled with Vanilla CSS inside the `<style>` block of [astorb3d.html](file:///F:/dev/astorb3d%20-%20Copy/astorb3d.html).
-    - Avoid adding external CSS frameworks (such as TailwindCSS) unless explicitly instructed by the user.
-2. **WebGL Shaders & Performance**:
-    - Asteroid orbits are simulated entirely on the GPU. Do not shift Keplerian orbital calculation loops back to CPU/JavaScript unless there is a specific non-performance-critical diagnostic requirement.
-    - Maintain the standard parameters (mean anomaly, argument of perihelion, longitude of ascending node, inclination, eccentricity, semi-major axis) inside the WebGL shader buffers.
-3. **Data Pipeline Stability**:
-    - If you modify the binary database representation, ensure that both the compiler tool [astorb2bin.js](file:///F:/dev/astorb3d%20-%20Copy/tools/astorb2bin.js) and the buffer loader/reader in [astorb3d.js](file:///F:/dev/astorb3d%20-%20Copy/scripts/js/astorb3d.js) are updated simultaneously to prevent runtime buffer alignment issues.
+1. **Do Not Overcomplicate Styling**: the UI is styled with vanilla CSS in the `<style>` block of [astorb3d.html](astorb3d.html), using the existing CSS custom properties for theming. No CSS frameworks unless explicitly asked.
+2. **GPU-first orbital math**: asteroid positions are computed in the vertex shader. Never move per-asteroid Kepler math into a JavaScript frame loop.
+3. **One Kepler solver**: the GLSL solver in `astorb3d.html` and `solveKeplerF32()` in [scripts/js/astorb-astro.js](scripts/js/astorb-astro.js) must stay step-for-step identical (start value, M reduction, iteration count). Change both together; the unit tests check the mirror.
+4. **Data pipeline stability**: the v1 record is 6 × float32 (M, ω, Ω, i, e, a). If the layout changes, update [tools/astorb2bin.js](tools/astorb2bin.js), the loader in [scripts/js/astorb3d.js](scripts/js/astorb3d.js), the metadata format and the docs in the same PR. Never hand-edit generated data (`temp/astorb3d.*`, `tests/fixtures/*`, `data/*.json`); regenerate it with the `npm run data:*` scripts.
+5. **Physics changes need Horizons-backed tests**: keep `tests/astorb-accuracy.test.mjs` passing. Never quietly change units, frames, angle conventions or the epoch. The goal is a faithful visualization, not an ephemeris (ADR 0001).
+6. **Parse astorb by documented columns**: see [tools/astorb_line.js](tools/astorb_line.js). Inclinations ≥ 100° and semi-major axes ≥ 1000 AU fill their separating space; never split on whitespace or depend on line length.
 
 ## Testing & Quality Control
 
-- **Pre-flight Check**: Before declaring a task finished, always run:
-    - `npm test` to verify unit tests pass.
-    - `npm run lint` to ensure there are no ESLint violations.
-    - `npm run format` to auto-format modified files.
-- **Unit Tests**:
-    - Add test coverage in [astorb-utils.test.mjs](file:///F:/dev/astorb3d%20-%20Copy/tests/astorb-utils.test.mjs) if you add or modify utility functions in [astorb-utils.js](file:///F:/dev/astorb3d%20-%20Copy/scripts/js/astorb-utils.js).
+Before declaring a task finished, run:
+
+- `npm test` — unit, data and accuracy tests.
+- `npm run test:e2e` — browser tests (Playwright, fixture dataset).
+- `npm run lint` — must report zero errors.
+- `npm run format` — formats modified files.
+
+If you add or modify functions in `astorb-utils.js` or `astorb-astro.js`, add tests in `tests/`.
