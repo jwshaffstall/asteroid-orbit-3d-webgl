@@ -4,9 +4,9 @@ Oct 31, 2026 · @John Shaffstall
 
 ## Overview
 
-Fix the astronomy first, then stream the 1.49M-asteroid dataset in small, verified chunks that render as they arrive, then layer on performance, accuracy, UX and new features. There are 11 phases (0–10), shipped as four releases over about 15–19 weeks of solo work. Each phase ends in a gate you can test.
+Fix the astronomy first, then stream the 1.58M-asteroid dataset in small, verified chunks that render as they arrive, then layer on performance, accuracy, UX and new features. There are 11 phases (0–10), shipped as four releases over about 15–19 weeks of solo work. Each phase ends in a gate you can test.
 
-This plan merges `plans/plan.md` (Revision 3) and `plans/plan-alternative.md` (Revision 2.0). `plan.md` supplies the backbone: phases, releases, the compact v2 record format and concrete numbers. The alternative supplies integrity checks, a first scene that doesn't wait for data, object identity, the counter semantics, hosting budgets, the error-budget framing and agent guardrails, plus four current-code bugs that `plan.md` missed (all confirmed against `master` @ f6ea7dc). The conflicts and how they were resolved are listed below; once this plan is accepted, both source plans move to `plans/archive/`.
+This plan merges `plans/archive/plan.md` (Revision 3) and `plans/archive/plan-alternative.md` (Revision 2.0) and is the plan of record. `plan.md` supplies the backbone: phases, releases, the compact v2 record format and concrete numbers. The alternative supplies integrity checks, a first scene that doesn't wait for data, object identity, the counter semantics, hosting budgets, the error-budget framing and agent guardrails, plus four current-code bugs that `plan.md` missed (all confirmed against `master` @ f6ea7dc). The conflicts and how they were resolved are listed below.
 
 **Guiding principles**
 
@@ -62,14 +62,16 @@ Goal: a green CI baseline, a reproducible dataset from either of two sources, an
 - [ ] Keep Prettier (the codebase's Allman brace style depends on `prettier-plugin-brace-style`) and remove `oxfmt`; remove lint rules duplicated between ESLint and oxlint. Land the resulting reformat as one commit and add it to `.git-blame-ignore-revs`.
 - [ ] Node 24 LTS in CI and `engines` (Node 22 is in maintenance by late 2026; 24 strips TypeScript types natively, which Phase 8a relies on). Current major versions of the checkout, setup-node and upload-artifact actions; `npm ci` instead of `npm install`; cache Playwright browsers.
 - [ ] Inventory third-party licenses in `scripts/js/libs/` and keep the required notices.
-- [ ] Move `plans/plan.md` and `plans/plan-alternative.md` to `plans/archive/` once this plan is accepted; add `.idea/` and `.junie/` to `.gitignore` if they aren't already ignored.
+- [x] Source plans moved to `plans/archive/` (accepted Oct 31, 2026).
+- [x] Raw catalogs in `temp/` (`*.dat`, `*.dat.gz`) are gitignored, so a 423 MB source file can't be committed by accident. Add `.junie/` too if it shouldn't be tracked (`.idea/` already is ignored).
 
 **Data**
 
-- [ ] Write `tools/fetch-catalog.mjs` with two first-class sources: Lowell astorb over HTTPS (`https://ftp.lowell.edu/pub/elgb/astorb.dat.gz`, \~112 MB; FTP is no longer supported) and the MPC's `MPCORB.DAT.gz` with its own parser. Lowell's page currently reports its database service as unavailable, so the script falls back automatically and records which source it used. **Verify both URLs and their file sizes when you implement this; don't trust the values in this plan.**
+- [ ] Write `tools/fetch-catalog.mjs` with Lowell astorb as the primary source (download page <https://asteroid.lowell.edu/astorb/>, confirmed working on Oct 30, 2026; record the exact file URL the script uses) and the MPC's `MPCORB.DAT.gz` as an automatic fallback with its own parser. The script records which source it used.
+- [ ] **First snapshot, already downloaded:** `temp/2026-10-30-astorb.dat` (Lowell, uncompressed, 423,277,592 bytes, SHA-256 `4e3d54fbbf74bf9575f359f66d2f5f14c8066858b08e4a1fed059e00cf9dba73`). Checked on Oct 31: 1,579,394 records, every line exactly 267 characters with LF endings, and **one shared epoch, 2026-09-17** (JD 2461300.5 TT). That is 92,170 more records than the shipped binary. This file is the v1.1 source; archive it gzipped as release asset `data-lowell-20261030`.
 - [ ] Archive each fetched raw file as a GitHub release asset (`data-<source>-<YYYYMMDD>`), and record its SHA-256, download date, source, record count and epoch distribution in `data/manifest.source.json`. The build reads from the archived asset by checksum. That is what makes the build reproducible.
-- [ ] Add parser fixtures parsed by **field offsets, not line length**: Lowell's 266-column records with LF and CRLF endings; Lowell's 2018 format changes (inclinations above 99.99999°, a ≥ 1000 AU written as F13.7 instead of F13.8, an optional leading space before i and a, asteroid numbers stored as character fields); blank and rejected rows. Today's code expects 255, 267 or 268 characters depending on the file. Add MPCORB fixtures for packed designations, packed epochs and the file header.
-- [ ] Stop tracking the 2013 `astorb/astorb.dat.gz` (623,669 records) on `master`; it contradicts the shipped binary (1,487,224 records) and nothing loads it. Leave `temp/astorb3d.bin` in place: the live site serves it from the repo root until Phase 8a switches deploys to `dist/`. **Decision for the owner:** whether to purge old data blobs from history (`git filter-repo` plus a force-push, which breaks every existing clone and fork) or to leave history alone. Default: leave it alone.
+- [ ] Add parser fixtures parsed by **field offsets, not line length**: Lowell's records (267 characters per line in the Oct 2026 file; the docs say 266 columns, so the parser must not depend on either number) with LF and CRLF endings; Lowell's 2018 format changes (inclinations above 99.99999°, a ≥ 1000 AU written as F13.7 instead of F13.8, an optional leading space before i and a, asteroid numbers stored as character fields); blank and rejected rows. Today's code expects 255, 267 or 268 characters depending on the file. Add MPCORB fixtures for packed designations, packed epochs and the file header.
+- [ ] Stop tracking the 2013 `astorb/astorb.dat.gz` (623,669 records) on `master`; it contradicts the shipped binary (1,487,224 records) and nothing loads it. Leave `temp/astorb3d.bin` in place: the live site serves it from the repo root until Phase 8a switches deploys to `dist/`. **Decided:** git history is left alone (no `filter-repo`, no force-push); old data blobs stay in history.
 
 **Reference truth and harness**
 
@@ -77,10 +79,10 @@ Goal: a green CI baseline, a reproducible dataset from either of two sources, an
 - [ ] Add deterministic URL parameters (`?t=<seconds>&cam=<az,el,dist>&color=<n>&paused=1`) so screenshots and tests render an identical frame every run.
 - [ ] Capture golden screenshots at 3 fixed times and 3 camera views; upload as CI artifacts. These are a reference only: Phase 1 is meant to change them, and they are re-baselined at the end of Phase 1.
 - [ ] Add a smoke test that fails on any console error or `gl.getError()` during a 10-second run.
-- [ ] Record a performance baseline in `docs/perf.md` on named reference devices (one desktop GPU, one mid-range phone): bytes downloaded, time to first frame, time to first asteroids, time to full catalog, CPU frame time p50/p95, FPS at 1/2/4 px, JS heap. Every later perf gate uses these devices.
+- [ ] Record a performance baseline in `docs/perf.md` on the owner's desktop and an **iPhone 13 Pro** (iOS Safari, 3× display, 120 Hz ProMotion; Safari usually runs `requestAnimationFrame` at 60 Hz): bytes downloaded, time to first frame, time to first asteroids, time to full catalog, rough FPS. These numbers are for comparison, not gates (see the owner decisions at the end).
 - [ ] Document which visuals are stylized today (body radii, point sizes, moon orbits, the resonance block), so later phases know what they are allowed to change.
 - [ ] Pull JPL Horizons heliocentric ecliptic J2000 state vectors into `tests/fixtures/horizons/` for the data epoch, epoch ±1, ±7, ±30, ±50 days, and ±1 and ±10 years. Bodies: Mercury, Venus, Earth–Moon barycenter, Mars, Jupiter, Saturn, Uranus, Neptune, Ceres, Pallas, Vesta, 624 Hektor (Trojan L4), 1172 Äneas (Trojan L5), 153 Hilda, 434 Hungaria, 433 Eros (NEO), 99942 Apophis (Aten), 3200 Phaethon (e ≈ 0.89), Pluto. Commit the fetch script (`tools/horizons-fixtures.mjs`) so the fixtures can be regenerated for a new data epoch.
-- [ ] Build a deterministic \~20,000-record fixture dataset sampled across every dynamical class, for PR CI and visual tests. The full catalog runs only in nightly jobs, since software-rendered WebGL is too slow for 1.49M points on every PR.
+- [ ] Build a deterministic \~20,000-record fixture dataset sampled across every dynamical class, for PR CI and visual tests. The full catalog runs only in nightly jobs, since software-rendered WebGL is too slow for 1.58M points on every PR.
 - [ ] Get `npm ci`, `npm test`, `npm run lint`, `npm run format:check` and `npm run build` running in CI. Mark the known-broken build step as expected-fail until Phase 8a fixes it: today `dist/` contains neither the classic scripts nor `temp/astorb3d.bin`, and an audit step in CI proves this.
 
 **Gate:** CI green on the baseline; the dataset rebuilds from an archived source file with one command, and its checksum matches; Horizons fixtures and the fixture dataset committed; the screenshot job fails on a real timeout.
@@ -158,7 +160,7 @@ Goal: ship Phase 1's correctness work on the existing app within days. Only smal
 
 ## Phase 3 — Data format v2 and verified progressive streaming (L)
 
-Goal: the scene renders with no asteroid data; the first verified asteroids render within \~1 s; the rest stream in as \~1 MB chunks while the user is already interacting. The download shrinks from 35.7 MB to 23.8 MB before compression. Builds on the Phase 8a module layout and WebGL 2.
+Goal: the scene renders with no asteroid data; the first verified asteroids render within \~1 s; the rest stream in as \~1 MB chunks while the user is already interacting. The download is 25.3 MB before compression for the Oct 2026 catalog (1,579,394 × 16 bytes), against 37.9 MB in the v1 format. Builds on the Phase 8a module layout and WebGL 2.
 
 **Record layout (16 bytes, down from 24; every field naturally aligned)**
 
@@ -181,7 +183,7 @@ Classes (one per record): Atira, Aten, Apollo, Amor, Mars-crosser, Hungaria, inn
 **File structure**
 
 - [ ] `manifest.json`: `schemaVersion`, `catalogVersion` (hash of the content), record count, epoch (JD) with its timescale (TT), reference frame (ecliptic J2000), data source with URL, retrieval time and SHA-256, converter version, quantization parameters, class table, and a chunk list (file name, record count, decoded byte length, decoded SHA-256, a/H range).
-- [ ] Chunk 0 holds 16,384 records (256 KiB) for a fast first frame; every later chunk holds 65,536 records (1 MiB), about 23 chunks in all. Names are content-hashed (`chunk-00-<hash>.bin`), so browsers can cache them forever. The sizes are benchmarked once (Phase 4 measurement) before being locked in.
+- [ ] Chunk 0 holds 16,384 records (256 KiB) for a fast first frame; every later chunk holds 65,536 records (1 MiB), 25 chunks for the Oct 2026 catalog. Names are content-hashed (`chunk-00-<hash>.bin`), so browsers can cache them forever. The sizes are benchmarked once (Phase 4 measurement) before being locked in.
 - [ ] Store each chunk byte-planar (all M bytes, then all ω bytes, …) and gzip it; measure the real ratio and record it in `docs/perf.md`. The SHA-256 covers the **decoded**, de-planarized bytes, so the hash doesn't depend on how the host compresses.
 - [ ] Order records brightest-first (lowest H) across the whole file, with ties broken by catalog number, then designation, so the output is deterministic. There is no secondary sort inside chunks, so the drawn range is always one contiguous prefix, and every LOD level is a strict subset of the next. Compare by screenshot against a stratified sample (by a, e, i and class) and a seeded random shuffle before locking the order in. Brightest-first leaves faint NEOs out of the early chunks.
 
@@ -195,7 +197,7 @@ Classes (one per record): Atira, Aten, Apollo, Amor, Mars-crosser, Hungaria, inn
 **Streaming loader**
 
 1. Start the render loop and draw the Sun, planets, orbit guides and controls **before** any catalog request. Nothing in the loop waits on the network.
-2. Fetch `manifest.json`; allocate one GPU buffer for the full record count (23.8 MB of VRAM) and the VAO bindings.
+2. Fetch `manifest.json`; allocate one GPU buffer for the full record count (25.3 MB of VRAM for the Oct 2026 catalog) and the VAO bindings.
 3. Fetch chunk 0, then the rest with 3–4 requests in parallel (2 on slow connections), using `fetch()` + `ReadableStream` for byte progress only.
 4. Decompress with `DecompressionStream('gzip')` (fflate fallback), de-planarize, check the decoded length and `crypto.subtle.digest('SHA-256')` against the manifest. A mismatch counts as a failed chunk. Records from an unverified chunk never reach the GPU.
 5. `bufferSubData` the verified chunk into its slot and raise the draw count. A chunk that arrives out of order waits until the chunks before it land, so the drawn range stays a prefix.
@@ -203,22 +205,22 @@ Classes (one per record): Atira, Aten, Apollo, Amor, Mars-crosser, Hungaria, inn
 
 - [ ] One manifest per session: each load runs under an `AbortController`, and a stale request (from a reload or a newer manifest) can't publish into the current buffer. Two catalog versions are never mixed.
 - [ ] Retry each chunk independently with exponential backoff plus jitter, up to a fixed limit; retry a hash mismatch once with `cache: 'reload'`, then mark the chunk failed. A failed chunk shows a small warning with a Retry button and never stops the app.
-- [ ] Replace the full-screen overlay with a non-blocking progress pill. Its counters are kept separate: **downloaded ≠ verified ≠ on GPU ≠ visible**. For example: "412,000 / 1,487,224 asteroids · 9.8 / 15.1 MB". States: Scene ready → Loading → Partial (n failed) → Complete. The UI never says "Complete" when only part of the catalog is shown.
+- [ ] Replace the full-screen overlay with a non-blocking progress pill. Its counters are kept separate: **downloaded ≠ verified ≠ on GPU ≠ visible**. For example: "412,000 / 1,579,394 asteroids · 9.8 / 16.0 MB". States: Scene ready → Loading → Partial (n failed) → Complete. The UI never says "Complete" when only part of the catalog is shown.
 - [ ] Respect `navigator.connection.saveData` and slow `effectiveType` where supported (Safari and Firefox lack the API): load chunks 0–3 by default, with a "Load full catalog (≈ N MB)" button.
-- [ ] Optional memory cap: where `navigator.deviceMemory` ≤ 2 (Chromium only), stop streaming at a lower cap. Never require the API; when it's missing, frame-time adaptation (Phase 4) does the job.
+- [ ] Optional memory cap: where `navigator.deviceMemory` ≤ 2 (Chromium only), stop streaming at a lower cap. Never require the API: Safari, and so the iPhone, doesn't have it, and there frame-time adaptation (Phase 4) does the job.
 - [ ] Build data URLs from `import.meta.env.BASE_URL`, so they work under the GitHub Pages subpath.
 - [ ] Keep the v1 loader behind `?data=v1` for one release, then delete it.
 
 **Tests**
 
 - [ ] PR CI on the fixture dataset: with all catalog requests blocked, the scene is interactive and no asteroids are drawn; chunks become visible in order; the draw count rises monotonically; a truncated chunk and a chunk with a flipped byte are rejected, never drawn, and recovered by retry; an out-of-order arrival doesn't open a gap; the counters agree in every state.
-- [ ] Nightly on the full catalog with throttled network (Fast 3G and 4G): first asteroids within 1.5 s on 4G; frame time stays under 16 ms while chunks arrive; 25 / 50 / 75 % states are captured as screenshots.
+- [ ] Nightly on the full catalog with throttled network (Fast 3G and 4G): record time to first asteroids and frame time while chunks arrive (reported, not gated); 25 / 50 / 75 % states are captured as screenshots.
 
-**Gate:** scene visible with the network blocked; time to first verified asteroids ≤ 1 s on broadband (≥ 10× faster than v1); full catalog streams without dropped frames; no unverified record is ever drawn.
+**Gate:** scene visible with the network blocked; first verified asteroids appear long before the full catalog finishes (aim: \~1 s on broadband); streaming doesn't visibly stutter on the iPhone 13 Pro; no unverified record is ever drawn.
 
 ## Phase 4 — Runtime rendering performance (M)
 
-Goal: a steady 60 FPS with all 1.49M asteroids on a mid-range phone, and near-zero GPU use when nothing moves. Completes release v2.0.
+Goal: the full catalog plays smoothly on an iPhone 13 Pro and on desktop, and the GPU idles when nothing moves. Completes release v2.0.
 
 **GPU pipeline (WebGL 2, required since Phase 8a)**
 
@@ -227,7 +229,7 @@ Goal: a steady 60 FPS with all 1.49M asteroids on a mid-range phone, and near-ze
 - [ ] Store mean motion n and √(1 − e²) per record (or precomputed orientation factors) only if benchmarks show the shader is ALU-bound, counting the extra download and VRAM; skip if bandwidth-bound.
 - [ ] Trim unused varyings, and branch on color mode only where it measurably helps.
 - [ ] Prefix-count LOD only (`drawArrays(0, n)`); never discard millions of vertices in the shader when a smaller draw count does the same job.
-- [ ] Add adaptive quality: adjust DPR first, then the draw count, from frame-time percentiles with hysteresis so it doesn't oscillate. It never triggers network requests or reshuffles points. Show when it is active ("showing 900k of 1.49M"), and allow turning it off.
+- [ ] Add adaptive quality: adjust DPR first, then the draw count, from frame-time percentiles with hysteresis so it doesn't oscillate. It never triggers network requests or reshuffles points. Show when it is active ("showing 900k of 1.58M"), and allow turning it off.
 - [ ] Draw planet and dwarf-planet orbit lines from precomputed positions with a small line shader and one color per orbit.
 
 **Trails**
@@ -246,7 +248,7 @@ Goal: a steady 60 FPS with all 1.49M asteroids on a mid-range phone, and near-ze
 
 **Measurement**
 
-- [ ] Profile with Spector.js and the browser performance panel; record GPU ms (via `EXT_disjoint_timer_query_webgl2` where available; CPU time is never reported as GPU time), CPU ms and FPS at 1/2/4 px on the reference devices in `docs/perf.md`.
+- [ ] Profile with Spector.js and the browser performance panel; record GPU ms (via `EXT_disjoint_timer_query_webgl2` where available; Safari doesn't have it, and CPU time is never reported as GPU time), CPU ms and FPS at 1/2/4 px on the desktop and the iPhone 13 Pro in `docs/perf.md`. Profile the iPhone through Safari Web Inspector over USB.
 - [ ] Add a `?bench=1` mode that runs a fixed 20-second camera path with adaptive quality off and prints frame-time percentiles. Use it for the one-time chunk-size benchmark (256 KiB / 1 MiB / 2 MiB): time to first asteroids, gap between visible updates, upload p95, request count.
 - [ ] Synthetic scale tests at 100k, 500k, 1M and 2M records, so catalog growth doesn't surprise us.
 
@@ -254,7 +256,7 @@ Goal: a steady 60 FPS with all 1.49M asteroids on a mid-range phone, and near-ze
 
 - [ ] Tag and deploy v2.0 once Phases 8a, 3 and 4 pass their gates.
 
-**Gate:** with adaptive quality **off**, p95 frame time ≤ 16.7 ms with the full catalog on the reference mid-range phone at 2 px; idle (paused, still camera) GPU use near zero; v2.0 is live.
+**Gate:** with adaptive quality **off**, the full catalog at 2 px plays smoothly (no visible stutter, about 60 FPS) on the iPhone 13 Pro in Safari, measured with `?bench=1`, with no regression from the previous release; when idle (paused, still camera) the app skips frames; v2.0 is live.
 
 ## Phase 5 — Higher accuracy and time (S–M)
 
@@ -340,7 +342,7 @@ Goal: turn the visualization into an explorer — pick, search and filter indivi
 
 **7b — Analysis views and extras (v2.2)**
 
-- [ ] Linked 2D panels: an a-histogram (Kirkwood gaps), a–e and a–i scatter plots; brushing a range filters the 3D view. Draw them from the worker's copy (or GPU-rendered points), not 1.49M SVG nodes, and label them "sample" while the catalog is incomplete.
+- [ ] Linked 2D panels: an a-histogram (Kirkwood gaps), a–e and a–i scatter plots; brushing a range filters the 3D view. Draw them from the worker's copy (or GPU-rendered points), not 1.58M SVG nodes, and label them "sample" while the catalog is incomplete.
 - [ ] New color modes: by H (size proxy), by dynamical class, by Tisserand parameter relative to Jupiter, and by orbit uncertainty from an optional side file.
 - [ ] Export the selected objects' elements to CSV / JSON, with catalog version, epoch and source.
 
@@ -466,12 +468,12 @@ Goal: one accurate source of guidance for people and agents, and a README that s
 
 ## Definition of done, decisions and risks
 
-**Owner decisions needed before or during Phase 0**
+**Owner decisions (resolved Oct 31, 2026)**
 
-- [ ] Purge old data blobs from git history (force-push), or leave history as is (default)?
-- [ ] Which reference desktop and mid-range phone the perf gates use.
-- [ ] Data source for v1.1 if Lowell is still down: MPCORB (default) or wait.
-- [ ] Accept this integrated plan and archive the two source plans.
+- [x] Git history: leave the old data blobs in history; no rewrite or force-push.
+- [x] Performance: no hard numeric targets for now. The bar is "works well on the owner's iPhone 13 Pro" (and desktop). Numbers are measured and recorded so regressions are visible, but they don't gate releases.
+- [x] Data source for v1.1: Lowell is reachable; use `temp/2026-10-30-astorb.dat` (epoch 2026-09-17). MPCORB stays the automatic fallback for refreshes.
+- [x] This integrated plan accepted; source plans moved to `plans/archive/`.
 
 **v1.1 is done when**
 
@@ -484,7 +486,7 @@ Goal: one accurate source of guidance for people and agents, and a README that s
 **v2.0 is done when**
 
 - [ ] The scene renders with the catalog blocked; the first verified asteroids render within 1 s on broadband; the full catalog streams without dropped frames; no unverified record is ever drawn.
-- [ ] p95 frame time ≤ 16.7 ms with the full catalog on the reference mid-range phone, adaptive quality off.
+- [ ] The full catalog plays smoothly on the iPhone 13 Pro in Safari with adaptive quality off.
 - [ ] The dataset rebuilds byte-identically from either archived source and its checksum.
 - [ ] `npm run build` output is what's deployed under the Pages subpath; PR and nightly CI are green; rollback rehearsed.
 - [ ] README and `AGENTS.md` are accurate and are the only guidance files (other agent files are pointers).
@@ -504,7 +506,7 @@ Goal: one accurate source of guidance for people and agents, and a README that s
 | Schedule slips past the 15–19 week estimate                                                                 | Late v2                                             | Four releases, so users get value at each step; DE440 and families already cut to stretch                            |
 | Float32 time precision far from the epoch                                                                   | Visible jitter past a few centuries                 | Clamp to ±1,000 years and 3000 AD; accuracy-horizon indicator                                                        |
 | `DecompressionStream` missing on older browsers (Safari before 16.4)                                        | Streaming fails                                     | fflate fallback                                                                                                      |
-| GPU memory on low-end phones (23.8 MB vertex buffer)                                                        | Crashes or context loss                             | Optional `deviceMemory` cap; adaptive quality; context-loss handling that rebuilds from the HTTP cache               |
+| GPU memory on low-end phones (25.3 MB vertex buffer)                                                        | Crashes or context loss                             | Optional `deviceMemory` cap; adaptive quality; context-loss handling that rebuilds from the HTTP cache               |
 | Service worker serves a stale or broken shell                                                               | Fixes can't reach users                             | Shipped in v2.1 rather than v2.0; network-first shell, version check, `?nosw=1` escape hatch, tested unregister path |
 | Brightest-first ordering biases the early view                                                              | NEOs and faint populations absent from early frames | Screenshot comparison against stratified and random orders in Phase 3                                                |
 | WebGL 2 requirement excludes a few old devices                                                              | Some users see a message instead of the app         | Clear message with a link to a static screenshot gallery                                                             |
