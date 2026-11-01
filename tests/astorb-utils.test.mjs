@@ -1,25 +1,18 @@
-import test from "node:test";
-import assert from "node:assert/strict";
-import { createRequire } from "node:module";
+import { test, expect } from "vite-plus/test";
+import * as utils from "../scripts/js/astorb-utils.js";
 
-const require = createRequire(import.meta.url);
-const utils = require("../scripts/js/astorb-utils.js");
-
-test("formatBytes handles common sizes", () =>
-{
-    assert.equal(utils.formatBytes(0), "0 B");
-    assert.equal(utils.formatBytes(1024), "1.0 KB");
-    assert.equal(utils.formatBytes(1048576), "1.0 MB");
+test("formatBytes handles common sizes", () => {
+    expect(utils.formatBytes(0)).toBe("0 B");
+    expect(utils.formatBytes(1024)).toBe("1.0 KB");
+    expect(utils.formatBytes(1048576)).toBe("1.0 MB");
 });
 
-test("formatAsteroidPercent handles empty and non-empty totals", () =>
-{
-    assert.equal(utils.formatAsteroidPercent(5, 0), "0%");
-    assert.equal(utils.formatAsteroidPercent(50, 200), "25.0%");
+test("formatAsteroidPercent handles empty and non-empty totals", () => {
+    expect(utils.formatAsteroidPercent(5, 0)).toBe("0%");
+    expect(utils.formatAsteroidPercent(50, 200)).toBe("25.0%");
 });
 
-test("buildStatusText includes key simulation fields", () =>
-{
+test("buildStatusText includes key simulation fields", () => {
     const status = utils.buildStatusText({
         simTime: 365.25 * 24 * 3600,
         paused: false,
@@ -28,14 +21,13 @@ test("buildStatusText includes key simulation fields", () =>
         asteroidDrawCount: 100,
     });
 
-    assert.match(status, /\[RUNNING\]/);
-    assert.match(status, /Time: 1\.00 years/);
-    assert.match(status, /Asteroids: 100 \/ 200 \(50\.0%\)/);
-    assert.match(status, /Reverse/);
+    expect(status).toMatch(/\[RUNNING\]/);
+    expect(status).toMatch(/Time: 1\.00 years/);
+    expect(status).toMatch(/Asteroids: 100 \/ 200 \(50\.0%\)/);
+    expect(status).toMatch(/Reverse/);
 });
 
-test("buildStatusText shows the sim date and any notice", () =>
-{
+test("buildStatusText shows the sim date and any notice", () => {
     const status = utils.buildStatusText({
         simDate: "2026-10-31",
         notice: "Planet positions approximate outside 1800–2050",
@@ -44,16 +36,15 @@ test("buildStatusText shows the sim date and any notice", () =>
         asteroidCount: 10,
         asteroidDrawCount: 10,
     });
-    assert.match(status, /^\[PAUSED\] Date: 2026-10-31 \|/);
-    assert.match(status, /Forward\) \| Planet positions approximate/);
-    assert.doesNotMatch(utils.buildStatusText({ simDate: "2026-10-31" }), /\| $/);
+    expect(status).toMatch(/^\[PAUSED\] Date: 2026-10-31 \|/);
+    expect(status).toMatch(/Forward\) \| Planet positions approximate/);
+    expect(utils.buildStatusText({ simDate: "2026-10-31" })).not.toMatch(/\| $/);
 });
 
-test("accuracyNotice flags dates far from the epoch or outside the planet table", () =>
-{
-    assert.equal(utils.accuracyNotice(44, 2026), "");
-    assert.equal(utils.accuracyNotice(-365.25 * 30, 1996), "");
-    assert.match(utils.accuracyNotice(365.25 * 40, 2066), /1800–2050/);
-    assert.match(utils.accuracyNotice(-365.25 * 250, 1776), /Over 100 years/);
-    assert.match(utils.accuracyNotice(365.25 * 1000, 3026), /limit/);
+test("accuracyNotice flags dates far from the epoch or outside the planet table", () => {
+    expect(utils.accuracyNotice(44, 2026)).toBe("");
+    expect(utils.accuracyNotice(-365.25 * 30, 1996)).toBe("");
+    expect(utils.accuracyNotice(365.25 * 40, 2066)).toMatch(/1800–2050/);
+    expect(utils.accuracyNotice(-365.25 * 250, 1776)).toMatch(/Over 100 years/);
+    expect(utils.accuracyNotice(365.25 * 1000, 3026)).toMatch(/limit/);
 });

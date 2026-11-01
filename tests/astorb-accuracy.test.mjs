@@ -3,13 +3,12 @@
 // Regenerate the fixtures with `node tools/horizons-fixtures.mjs --epoch YYYY-MM-DD` when the
 // dataset epoch changes.
 
-import test from "node:test";
-import assert from "node:assert/strict";
+import { test, expect } from "vite-plus/test";
 import fs from "node:fs";
 import { createRequire } from "node:module";
+import * as astro from "../scripts/js/astorb-astro.js";
 
 const require = createRequire(import.meta.url);
-const astro = require("../scripts/js/astorb-astro.js");
 const astorbLine = require("../tools/astorb_line.js");
 
 const readJson = (relative) =>
@@ -34,31 +33,23 @@ const elementsFromRecord = (record) => ({
     M: record.meanAnomaly,
 });
 
-const assertClose = (name, jd, computed, reference) =>
-{
+const assertClose = (name, jd, computed, reference) => {
     const angle = astro.angleBetweenDegrees(computed, reference);
-    assert.ok(
-        angle < TOLERANCE_DEGREES,
-        `${name} at JD ${jd}: ${angle.toFixed(3)} deg from Horizons (limit ${TOLERANCE_DEGREES})`
-    );
+    expect(angle).toBeLessThan(TOLERANCE_DEGREES);
     return angle;
 };
 
-test("fixtures are for the dataset epoch", () =>
-{
+test("fixtures are for the dataset epoch", () => {
     const meta = readJson("../temp/astorb3d.meta.json");
-    assert.equal(horizons.epochJd, meta.epochJd);
-    assert.equal(dwarfs.epochJd, meta.epochJd);
+    expect(horizons.epochJd).toBe(meta.epochJd);
+    expect(dwarfs.epochJd).toBe(meta.epochJd);
 });
 
-for (const name of astro.PLANET_NAMES)
-{
-    test(`${name} is within ${TOLERANCE_DEGREES} deg of Horizons at epoch, +/-50 days and +/-10 years`, () =>
-    {
+for (const name of astro.PLANET_NAMES) {
+    test(`${name} is within ${TOLERANCE_DEGREES} deg of Horizons at epoch, +/-50 days and +/-10 years`, () => {
         const samples = horizons.bodies[name].samples;
-        assert.equal(samples.length, 5);
-        for (const sample of samples)
-        {
+        expect(samples.length).toBe(5);
+        for (const sample of samples) {
             assertClose(name, sample.jd, astro.planetPosition(name, sample.jd), sample.position);
         }
     });
@@ -74,19 +65,16 @@ const SPOT_CHECKS = {
     Phaethon: 3200,
 };
 
-for (const [name, number] of Object.entries(SPOT_CHECKS))
-{
-    test(`${name} propagated from catalog elements is within ${TOLERANCE_DEGREES} deg of Horizons at epoch +/-50 days`, () =>
-    {
+for (const [name, number] of Object.entries(SPOT_CHECKS)) {
+    test(`${name} propagated from catalog elements is within ${TOLERANCE_DEGREES} deg of Horizons at epoch +/-50 days`, () => {
         const record = catalog.find((entry) => entry.number === number);
-        assert.ok(record, `no catalog line for ${name}`);
+        expect(record).toBeTruthy();
         const epochJd = astro.jdFromYyyymmdd(record.epoch);
         const near = horizons.bodies[name].samples.filter(
             (sample) => Math.abs(sample.jd - epochJd) <= 50
         );
-        assert.equal(near.length, 3);
-        for (const sample of near)
-        {
+        expect(near.length).toBe(3);
+        for (const sample of near) {
             const position = astro.keplerPosition(
                 elementsFromRecord(record),
                 (sample.jd - epochJd) * SECONDS_PER_DAY
@@ -96,21 +84,18 @@ for (const [name, number] of Object.entries(SPOT_CHECKS))
     });
 }
 
-test("Pluto from Horizons elements at the epoch matches Horizons vectors at +/-50 days", () =>
-{
+test("Pluto from Horizons elements at the epoch matches Horizons vectors at +/-50 days", () => {
     const pluto = dwarfs.bodies.find((body) => body.name === "Pluto");
     const near = horizons.bodies.Pluto.samples.filter(
         (sample) => Math.abs(sample.jd - pluto.epochJd) <= 50
     );
-    for (const sample of near)
-    {
+    for (const sample of near) {
         const position = astro.keplerPosition(pluto, (sample.jd - pluto.epochJd) * SECONDS_PER_DAY);
         assertClose("Pluto", sample.jd, position, sample.position);
     }
 });
 
-test("the old hand-converted Earth elements would have failed this test", () =>
-{
+test("the old hand-converted Earth elements would have failed this test", () => {
     // Regression guard: the pre-v1.1 table stored L as M and varpi as w.
     const oldEarth = {
         a: 1.00000261,
@@ -126,5 +111,5 @@ test("the old hand-converted Earth elements would have failed this test", () =>
         astro.keplerPosition(oldEarth, dtSeconds),
         sample.position
     );
-    assert.ok(angle > 10, `old elements unexpectedly close (${angle} deg)`);
+    expect(angle).toBeGreaterThan(10);
 });

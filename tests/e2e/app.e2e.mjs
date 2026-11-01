@@ -1,8 +1,7 @@
-// Browser tests (Playwright + node:test) against the 20k-record fixture dataset.
+// Browser tests (Playwright + Vitest) against the 20k-record fixture dataset.
 // Run with `npm run test:e2e`. Uses headless Chromium with SwiftShader WebGL.
 
-import test, { before, after } from "node:test";
-import assert from "node:assert/strict";
+import { test, expect, beforeAll, afterAll } from "vite-plus/test";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
@@ -17,8 +16,7 @@ let server;
 let port;
 let browser;
 
-before(async () =>
-{
+beforeAll(async () => {
     ({ server, port } = await startStaticServer(root));
     browser = await chromium.launch({
         headless: true,
@@ -26,20 +24,17 @@ before(async () =>
     });
 });
 
-after(async () =>
-{
+afterAll(async () => {
     await browser?.close();
     server?.close();
 });
 
 // Open the app, collect console errors, and wait for the first rendered frame.
-const openApp = async (query = "", contextOptions = { viewport: { width: 1280, height: 720 } }) =>
-{
+const openApp = async (query = "", contextOptions = { viewport: { width: 1280, height: 720 } }) => {
     const context = await browser.newContext(contextOptions);
     const page = await context.newPage();
     const errors = [];
-    page.on("console", (message) =>
-    {
+    page.on("console", (message) => {
         if (message.type() === "error") errors.push(message.text());
     });
     page.on("pageerror", (error) => errors.push(error.message));
@@ -54,10 +49,8 @@ const openApp = async (query = "", contextOptions = { viewport: { width: 1280, h
 const litPixels = (page) =>
     page.evaluate(
         () =>
-            new Promise((resolve) =>
-            {
-                requestAnimationFrame(() =>
-                {
+            new Promise((resolve) => {
+                requestAnimationFrame(() => {
                     const source = document.getElementById("astorb3dCanvas");
                     const copy = document.createElement("canvas");
                     copy.width = source.width;
@@ -66,8 +59,7 @@ const litPixels = (page) =>
                     context.drawImage(source, 0, 0);
                     const data = context.getImageData(0, 0, copy.width, copy.height).data;
                     let lit = 0;
-                    for (let index = 0; index < data.length; index += 4)
-                    {
+                    for (let index = 0; index < data.length; index += 4) {
                         if (data[index] + data[index + 1] + data[index + 2] > 30) lit++;
                     }
                     resolve(lit);
@@ -75,8 +67,7 @@ const litPixels = (page) =>
             })
     );
 
-test("loads the fixture dataset at its epoch with no console or WebGL errors for 10 s", async () =>
-{
+test("loads the fixture dataset at its epoch with no console or WebGL errors for 10 s", async () => {
     const { page, context, errors } = await openApp("t=0");
     const state = await page.evaluate(() => ({
         count: window.astorb.asteroidCount,
@@ -84,22 +75,20 @@ test("loads the fixture dataset at its epoch with no console or WebGL errors for
         epochLabel: document.getElementById("dataEpoch").textContent,
         snapshotLabel: document.getElementById("dataSnapshot").textContent,
     }));
-    assert.equal(state.count, 19994);
-    assert.equal(state.epochJd, 2461300.5);
-    assert.equal(state.epochLabel, "2026-09-17");
-    assert.equal(state.snapshotLabel, "2026-10-30");
+    expect(state.count).toBe(19994);
+    expect(state.epochJd).toBe(2461300.5);
+    expect(state.epochLabel).toBe("2026-09-17");
+    expect(state.snapshotLabel).toBe("2026-10-30");
     await page.waitForTimeout(10000);
-    assert.equal(await page.evaluate(() => window.__astorbGlErrors || 0), 0);
-    assert.deepEqual(errors, []);
-    assert.ok((await litPixels(page)) > 1000, "frame is empty");
+    expect(await page.evaluate(() => window.__astorbGlErrors || 0)).toBe(0);
+    expect(errors).toEqual([]);
+    expect(await litPixels(page)).toBeGreaterThan(1000);
     await context.close();
 });
 
-test("opens at today's date unless ?t= pins it", async () =>
-{
+test("opens at today's date unless ?t= pins it", async () => {
     const { page, context } = await openApp("paused=1");
-    const status = await page.evaluate(() =>
-    {
+    const status = await page.evaluate(() => {
         window.astorb.frameCount = 9; // force a status refresh on the next frame
         return new Promise((resolve) =>
             requestAnimationFrame(() =>
@@ -108,73 +97,66 @@ test("opens at today's date unless ?t= pins it", async () =>
         );
     });
     const today = new Date().toISOString().slice(0, 10);
-    assert.match(status, new RegExp(`Date: ${today}`));
+    expect(status).toMatch(new RegExp(`Date: ${today}`));
     await context.close();
 });
 
-test("Space toggles pause exactly once with the canvas focused", async () =>
-{
+test("Space toggles pause exactly once with the canvas focused", async () => {
     const { page, context } = await openApp("t=0");
     await page.click("#astorb3dCanvas");
     const before = await page.evaluate(() => window.astorb.time.paused);
     await page.keyboard.press("Space");
-    assert.equal(await page.evaluate(() => window.astorb.time.paused), !before);
+    expect(await page.evaluate(() => window.astorb.time.paused)).toBe(!before);
     await page.keyboard.press("ArrowUp");
     // One press doubles the speed once (it used to be applied twice: 4x).
-    assert.equal(await page.evaluate(() => window.astorb.time.timeScale), 2e6);
+    expect(await page.evaluate(() => window.astorb.time.timeScale)).toBe(2e6);
     await context.close();
 });
 
-test("shortcuts are ignored while a button has focus", async () =>
-{
+test("shortcuts are ignored while a button has focus", async () => {
     const { page, context } = await openApp("t=0");
     await page.focus("#themeToggleButton");
     const scale = await page.evaluate(() => window.astorb.time.timeScale);
     await page.keyboard.press("ArrowUp");
-    assert.equal(await page.evaluate(() => window.astorb.time.timeScale), scale);
+    expect(await page.evaluate(() => window.astorb.time.timeScale)).toBe(scale);
     await context.close();
 });
 
-test("changing the point size leaves cinematic mode on", async () =>
-{
+test("changing the point size leaves cinematic mode on", async () => {
     const { page, context } = await openApp("t=0");
     await page.click("#cinematicModeButton");
     await page.click("#pointSizeButton");
-    assert.equal(await page.evaluate(() => window.astorb.cinematicMode.enabled), true);
-    assert.match(await page.textContent("#cinematicModeButton"), /On/);
+    expect(await page.evaluate(() => window.astorb.cinematicMode.enabled)).toBe(true);
+    expect(await page.textContent("#cinematicModeButton")).toMatch(/On/);
     await context.close();
 });
 
-test("ten density halvings and doublings give zero WebGL errors and a non-empty frame", async () =>
-{
+test("ten density halvings and doublings give zero WebGL errors and a non-empty frame", async () => {
     const { page, context, errors } = await openApp("t=0&paused=1");
-    for (let step = 0; step < 10; step++)
-    {
+    for (let step = 0; step < 10; step++) {
         await page.click("#asteroidHalfButton", { force: true });
         await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
     }
     const smallest = await page.evaluate(() => window.astorb.asteroidDrawCount);
-    assert.equal(smallest, Math.ceil(19994 / 1024));
-    for (let step = 0; step < 10; step++)
-    {
+    expect(smallest).toBe(Math.ceil(19994 / 1024));
+    for (let step = 0; step < 10; step++) {
         await page.click("#asteroidDoubleButton", { force: true });
         await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
     }
-    assert.equal(await page.evaluate(() => window.astorb.asteroidDrawCount), 19994);
-    assert.equal(await page.evaluate(() => window.__astorbGlErrors || 0), 0);
-    assert.ok((await litPixels(page)) > 1000, "frame is empty");
-    assert.deepEqual(errors, []);
+    expect(await page.evaluate(() => window.astorb.asteroidDrawCount)).toBe(19994);
+    expect(await page.evaluate(() => window.__astorbGlErrors || 0)).toBe(0);
+    expect(await litPixels(page)).toBeGreaterThan(1000);
+    expect(errors).toEqual([]);
     await context.close();
 });
 
-test("renders on an iPhone 13 Pro-sized viewport", async () =>
-{
+test("renders on an iPhone 13 Pro-sized viewport", async () => {
     const { page, context, errors } = await openApp("t=0", {
         ...devices["iPhone 13 Pro"],
         deviceScaleFactor: 1,
     });
-    assert.ok((await litPixels(page)) > 500, "frame is empty");
-    assert.equal(await page.evaluate(() => window.__astorbGlErrors || 0), 0);
-    assert.deepEqual(errors, []);
+    expect(await litPixels(page)).toBeGreaterThan(500);
+    expect(await page.evaluate(() => window.__astorbGlErrors || 0)).toBe(0);
+    expect(errors).toEqual([]);
     await context.close();
 });
