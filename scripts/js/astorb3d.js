@@ -3,8 +3,12 @@
 // by John W. Shaffstall
 // Tuesday, October 15, 2013
 
-(function ()
-{
+import { mat4, vec3, vec4 } from "gl-matrix";
+import Stats from "stats.js";
+import * as astorbUtils from "./astorb-utils.js";
+import * as astorbAstro from "./astorb-astro.js";
+
+if (typeof window !== "undefined") {
     // Shim vendor-prefixed requestAnimationFrame for older browsers.
     var requestAnimationFrame =
         window.requestAnimationFrame ||
@@ -12,47 +16,40 @@
         window.webkitRequestAnimationFrame ||
         window.msRequestAnimationFrame;
     window.requestAnimationFrame = requestAnimationFrame;
-})();
+}
 
-var astorb = astorb || {};
+var astorb = typeof window !== "undefined" && window.astorb ? window.astorb : {};
 
 // UI formatting helpers for log output and status HUDs.
-astorb.utils = window.astorbUtils || {};
+astorb.utils = astorbUtils;
 astorb.formatNumber =
     astorb.utils.formatNumber ||
-    function (value)
-    {
+    function (value) {
         return value === null || value === undefined ? "--" : String(value);
     };
 astorb.formatAsteroidPercent =
     astorb.utils.formatAsteroidPercent ||
-    function (current, total)
-    {
-        if (!total)
-        {
+    function (current, total) {
+        if (!total) {
             return "0%";
         }
         return ((current / total) * 100).toFixed(1) + "%";
     };
 astorb.formatBytes =
     astorb.utils.formatBytes ||
-    function (bytes)
-    {
+    function (bytes) {
         return String(bytes);
     };
 astorb.formatBitsPerSecond =
     astorb.utils.formatBitsPerSecond ||
-    function (value)
-    {
+    function (value) {
         return String(value);
     };
 // Wire up the loading overlay progress ring and numeric readouts.
-astorb.initLoadingOverlay = function ()
-{
+astorb.initLoadingOverlay = function () {
     var overlay = document.getElementById("loadingOverlay");
     var indicator = document.querySelector("#loadingProgress .indicator");
-    if (!overlay || !indicator)
-    {
+    if (!overlay || !indicator) {
         return null;
     }
 
@@ -74,11 +71,9 @@ astorb.initLoadingOverlay = function ()
     return astorb.loadingElements;
 };
 
-astorb.showLoadingOverlay = function ()
-{
+astorb.showLoadingOverlay = function () {
     var elements = astorb.loadingElements || astorb.initLoadingOverlay();
-    if (!elements)
-    {
+    if (!elements) {
         return;
     }
     elements.overlay.classList.remove("hidden");
@@ -89,11 +84,9 @@ astorb.showLoadingOverlay = function ()
     astorb.updateLoadingOverlay(0, null);
 };
 
-astorb.updateLoadingOverlay = function (loaded, total)
-{
+astorb.updateLoadingOverlay = function (loaded, total) {
     var elements = astorb.loadingElements;
-    if (!elements)
-    {
+    if (!elements) {
         return;
     }
     var percent = total ? (loaded / total) * 100 : 0;
@@ -104,37 +97,30 @@ astorb.updateLoadingOverlay = function (loaded, total)
     var elapsedSeconds = (performance.now() - astorb.loadingState.startTime) / 1000;
     var bitsPerSecond = elapsedSeconds > 0 ? (loaded * 8) / elapsedSeconds : 0;
 
-    if (elements.percentage)
-    {
+    if (elements.percentage) {
         elements.percentage.textContent = clampedPercent.toFixed(1) + "%";
     }
-    if (elements.rate)
-    {
+    if (elements.rate) {
         elements.rate.textContent = "Rate: " + astorb.formatBitsPerSecond(bitsPerSecond);
     }
-    if (elements.size)
-    {
+    if (elements.size) {
         elements.size.textContent = "Total: " + astorb.formatBytes(total);
     }
-    if (elements.downloaded)
-    {
+    if (elements.downloaded) {
         elements.downloaded.textContent = "Downloaded: " + astorb.formatBytes(loaded);
     }
 };
 
-astorb.hideLoadingOverlay = function ()
-{
+astorb.hideLoadingOverlay = function () {
     var elements = astorb.loadingElements;
-    if (!elements)
-    {
+    if (!elements) {
         return;
     }
     elements.overlay.classList.add("hidden");
 };
 
 // Resize canvas drawing buffer + viewport to match CSS size.
-astorb.resizeWebGL = function ()
-{
+astorb.resizeWebGL = function () {
     var canvas = astorb.canvas;
     var gl = astorb.gl;
     if (!canvas || !gl) return;
@@ -144,8 +130,7 @@ astorb.resizeWebGL = function ()
     var displayHeight = canvas.clientHeight;
 
     // Fall back for older browsers.
-    if (!displayWidth || !displayHeight)
-    {
+    if (!displayWidth || !displayHeight) {
         displayWidth = canvas.offsetWidth;
         displayHeight = canvas.offsetHeight;
     }
@@ -155,22 +140,19 @@ astorb.resizeWebGL = function ()
     var width = Math.max(1, Math.floor(displayWidth * dpr));
     var height = Math.max(1, Math.floor(displayHeight * dpr));
 
-    if (canvas.width !== width || canvas.height !== height)
-    {
+    if (canvas.width !== width || canvas.height !== height) {
         canvas.width = width;
         canvas.height = height;
         gl.viewport(0, 0, width, height);
 
         // Update projection matrix to match new aspect ratio.
-        if (astorb.pUniform)
-        {
+        if (astorb.pUniform) {
             astorb.updateProjectionMatrix();
         }
     }
 };
 
-astorb.updateProjectionMatrix = function ()
-{
+astorb.updateProjectionMatrix = function () {
     var gl = astorb.gl;
     var canvas = astorb.canvas;
     if (!gl || !canvas || !astorb.pUniform) return;
@@ -192,8 +174,7 @@ astorb.updateProjectionMatrix = function ()
 
     gl.useProgram(astorb.asteroidProgram);
     gl.uniformMatrix4fv(astorb.pUniform, false, perspectiveMatrix);
-    if (astorb.bodyUniforms)
-    {
+    if (astorb.bodyUniforms) {
         gl.useProgram(astorb.bodyProgram);
         gl.uniformMatrix4fv(astorb.bodyUniforms.pMatrix, false, perspectiveMatrix);
     }
@@ -201,22 +182,18 @@ astorb.updateProjectionMatrix = function ()
 
 astorb.logDivId = "astorbLog";
 astorb.logDiv = document.getElementById(astorb.logDivId);
-astorb.log = function (inputMessage, inputColor)
-{
+astorb.log = function (inputMessage, inputColor) {
     var color = inputColor || "black";
     var message = "" + inputMessage;
 
-    if (console && console.log)
-    {
+    if (console && console.log) {
         console.log(message);
     }
 
     var logDiv = astorb.logDiv;
-    if (logDiv)
-    {
+    if (logDiv) {
         var resolvedColor = color;
-        if (astorb.isDarkTheme && color === "black")
-        {
+        if (astorb.isDarkTheme && color === "black") {
             resolvedColor = "#e2e8f0";
         }
         var coloredMessage = message.fontcolor(resolvedColor);
@@ -247,19 +224,17 @@ astorb.cinematicMode = {
     angularVelocity: 0.11,
     zoomAmplitude: 0.08,
 };
-astorb.astro = window.astorbAstro;
+astorb.astro = astorbAstro;
 
 // Deterministic URL options, so screenshots and tests render an identical frame every run:
 //   ?t=<seconds since the epoch>  pin the sim date (default: today)
 //   &cam=<azimuth deg>,<elevation deg>,<distance AU>
 //   &color=<color mode index>  &paused=1  &debug=1 (check gl.getError every frame)
 //   &data=<relative path to a .bin dataset> (tests use the small fixture dataset)
-astorb.readUrlOptions = function (search)
-{
+astorb.readUrlOptions = function (search) {
     var options = {};
     var params = new URLSearchParams(search || "");
-    var number = function (key)
-    {
+    var number = function (key) {
         if (!params.has(key)) return undefined;
         var value = Number(params.get(key));
         return Number.isFinite(value) ? value : undefined;
@@ -268,75 +243,63 @@ astorb.readUrlOptions = function (search)
     options.color = number("color");
     options.paused = params.get("paused") === "1";
     options.debug = params.get("debug") === "1";
-    if (params.has("cam"))
-    {
+    if (params.has("cam")) {
         var parts = params.get("cam").split(",").map(Number);
-        if (parts.length === 3 && parts.every(Number.isFinite))
-        {
+        if (parts.length === 3 && parts.every(Number.isFinite)) {
             options.cam = { azimuthDeg: parts[0], elevationDeg: parts[1], distanceAu: parts[2] };
         }
     }
     var data = params.get("data");
     // Same-origin relative paths only.
-    if (data && /^[\w\-./]+\.bin$/.test(data) && data.indexOf("..") < 0 && data[0] !== "/")
-    {
+    if (data && /^[\w\-./]+\.bin$/.test(data) && data.indexOf("..") < 0 && data[0] !== "/") {
         options.data = data;
     }
     return options;
 };
-astorb.options = astorb.readUrlOptions(window.location.search);
+astorb.options =
+    typeof window !== "undefined" && window.location
+        ? astorb.readUrlOptions(window.location.search)
+        : {};
 
-astorb.onLoadBody = function ()
-{
-    var canvas = document.getElementById(astorb.canvasId);
-    if (canvas)
-    {
-        if (astorb.options.data)
-        {
+astorb.onLoadBody = function () {
+    if (astorb.__bodyLoaded) return;
+    astorb.__bodyLoaded = true;
+    var canvas = typeof document !== "undefined" ? document.getElementById(astorb.canvasId) : null;
+    if (canvas) {
+        if (astorb.options.data) {
             astorb.resourcePath = astorb.options.data;
         }
         // The epoch comes from the dataset's metadata, so load that first (it is tiny).
-        astorb.loadMeta(function ()
-        {
+        astorb.loadMeta(function () {
             astorb.startApp(canvas);
         });
-    }
-    else
-    {
+    } else {
         astorb.log("unable to find canvas element with id '" + astorb.canvasId + "'");
     }
 };
 
-astorb.startApp = function (canvas)
-{
+astorb.startApp = function (canvas) {
     var gl;
 
-    try
-    {
+    try {
         var contextOptions = { antialias: false, depth: true };
         gl =
             canvas.getContext("webgl", contextOptions) ||
             canvas.getContext("experimental-webgl", contextOptions);
-        if (gl && !astorb.checkShaderPrecision(gl))
-        {
+        if (gl && !astorb.checkShaderPrecision(gl)) {
             return;
         }
         var initWebGLSuccess = astorb.initWebGL(gl, canvas);
-        if (initWebGLSuccess)
-        {
+        if (initWebGLSuccess) {
             // Keep WebGL sized to the CSS layout.
             astorb.resizeWebGL();
 
-            if (typeof ResizeObserver !== "undefined")
-            {
-                astorb._resizeObserver = new ResizeObserver(function ()
-                {
+            if (typeof ResizeObserver !== "undefined") {
+                astorb._resizeObserver = new ResizeObserver(function () {
                     astorb.resizeWebGL();
                 });
                 astorb._resizeObserver.observe(canvas);
-            }
-            else
-            {
+            } else {
                 window.addEventListener("resize", astorb.resizeWebGL);
             }
 
@@ -355,19 +318,15 @@ astorb.startApp = function (canvas)
             astorb.initStats();
             astorb.loadAstorbData();
         }
-    }
-    catch (exception)
-    {
+    } catch (exception) {
         astorb.log(exception, "yellow");
     }
 };
 
 // Orbits need highp floats in the vertex shader; refuse to draw wrong orbits silently.
-astorb.checkShaderPrecision = function (gl)
-{
+astorb.checkShaderPrecision = function (gl) {
     var format = gl.getShaderPrecisionFormat(gl.VERTEX_SHADER, gl.HIGH_FLOAT);
-    if (format && format.precision > 0)
-    {
+    if (format && format.precision > 0) {
         return true;
     }
     var message =
@@ -375,19 +334,16 @@ astorb.checkShaderPrecision = function (gl)
         "can't be drawn correctly here.";
     astorb.log(message, "red");
     var statusDiv = document.getElementById("statusDisplay");
-    if (statusDiv)
-    {
+    if (statusDiv) {
         statusDiv.textContent = message;
     }
     return false;
 };
 
 // Apply ?cam=, ?color= and ?paused= after the controls exist.
-astorb.applyUrlOptions = function ()
-{
+astorb.applyUrlOptions = function () {
     var options = astorb.options;
-    if (options.cam)
-    {
+    if (options.cam) {
         astorb.camera.azimuth = (options.cam.azimuthDeg * Math.PI) / 180;
         astorb.camera.elevation = (options.cam.elevationDeg * Math.PI) / 180;
         astorb.camera.distance = Math.max(
@@ -396,30 +352,25 @@ astorb.applyUrlOptions = function ()
         );
         astorb.updateViewMatrix();
     }
-    if (options.color !== undefined)
-    {
+    if (options.color !== undefined) {
         var index = Math.floor(options.color);
-        if (index >= 0 && index < astorb.colorModes.length)
-        {
+        if (index >= 0 && index < astorb.colorModes.length) {
             astorb.colorModeIndex = index;
             astorb.applyColorMode();
             astorb.refreshRenderColorControls();
         }
     }
-    if (options.paused)
-    {
+    if (options.paused) {
         astorb.time.paused = true;
         astorb.refreshTimeControls();
     }
 };
 
-astorb.initWebGL = function (gl, canvas)
-{
+astorb.initWebGL = function (gl, canvas) {
     var success = false;
     astorb.gl = gl;
     astorb.canvas = canvas;
-    if (gl && canvas)
-    {
+    if (gl && canvas) {
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
         astorb.applyDepthBufferState();
         gl.enable(gl.BLEND);
@@ -435,36 +386,29 @@ astorb.initWebGL = function (gl, canvas)
         astorb.initOrbitLabels();
 
         success = true;
-    }
-    else
-    {
+    } else {
         astorb.log("invalid WebGL context", "red");
     }
 
     return success;
 };
 
-astorb.applyDepthBufferState = function ()
-{
+astorb.applyDepthBufferState = function () {
     var gl = astorb.gl;
     if (!gl) return;
 
-    if (astorb.depthBufferEnabled)
-    {
+    if (astorb.depthBufferEnabled) {
         gl.enable(gl.DEPTH_TEST);
         gl.depthFunc(gl.LEQUAL);
         gl.depthMask(true);
         gl.clearDepth(1.0);
-    }
-    else
-    {
+    } else {
         gl.disable(gl.DEPTH_TEST);
         gl.depthMask(false);
     }
 };
 
-astorb.initShaders = function (gl)
-{
+astorb.initShaders = function (gl) {
     var fragmentShader = astorb.getShader(gl, "shader-fs");
     var vertexShader = astorb.getShader(gl, "shader-vs");
 
@@ -476,8 +420,7 @@ astorb.initShaders = function (gl)
     gl.linkProgram(shaderProgram);
 
     // if creating the shader program failed, alert
-    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS))
-    {
+    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
         astorb.log(
             "Unable to initialize the shader program: " + gl.getProgramInfoLog(shaderProgram),
             "red"
@@ -529,8 +472,7 @@ astorb.initShaders = function (gl)
     astorb.aMeanAnomaly = aMeanAnomaly;
 };
 
-astorb.initBodyShaders = function (gl)
-{
+astorb.initBodyShaders = function (gl) {
     var fragmentShader = astorb.getShader(gl, "shader-bodies-fs");
     var vertexShader = astorb.getShader(gl, "shader-bodies-vs");
 
@@ -539,8 +481,7 @@ astorb.initBodyShaders = function (gl)
     gl.attachShader(shaderProgram, fragmentShader);
     gl.linkProgram(shaderProgram);
 
-    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS))
-    {
+    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
         astorb.log(
             "Unable to initialize the body shader program: " + gl.getProgramInfoLog(shaderProgram),
             "red"
@@ -561,39 +502,30 @@ astorb.initBodyShaders = function (gl)
     };
 };
 
-astorb.getShader = function (gl, shaderId)
-{
+astorb.getShader = function (gl, shaderId) {
     var shaderScript, theSource, currentChild, shader;
 
     shaderScript = document.getElementById(shaderId);
 
-    if (!shaderScript)
-    {
+    if (!shaderScript) {
         return null;
     }
 
     theSource = "";
     currentChild = shaderScript.firstChild;
 
-    while (currentChild)
-    {
-        if (currentChild.nodeType == currentChild.TEXT_NODE)
-        {
+    while (currentChild) {
+        if (currentChild.nodeType == currentChild.TEXT_NODE) {
             theSource += currentChild.textContent;
         }
 
         currentChild = currentChild.nextSibling;
     }
-    if (shaderScript.type == "x-shader/x-fragment")
-    {
+    if (shaderScript.type == "x-shader/x-fragment") {
         shader = gl.createShader(gl.FRAGMENT_SHADER);
-    }
-    else if (shaderScript.type == "x-shader/x-vertex")
-    {
+    } else if (shaderScript.type == "x-shader/x-vertex") {
         shader = gl.createShader(gl.VERTEX_SHADER);
-    }
-    else
-    {
+    } else {
         // Unknown shader type
         return null;
     }
@@ -602,8 +534,7 @@ astorb.getShader = function (gl, shaderId)
     gl.compileShader(shader);
 
     // See if it compiled successfully
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS))
-    {
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
         astorb.log(
             "An error occurred compiling the shaders: " + gl.getShaderInfoLog(shader),
             "red"
@@ -614,53 +545,44 @@ astorb.getShader = function (gl, shaderId)
     return shader;
 };
 
-astorb.resourcePath = "temp/astorb3d.bin";
+astorb.resourcePath = "data/release/astorb3d.bin";
 
 // Epoch of the shipped Oct 2026 snapshot; used only if its metadata can't be loaded.
 astorb.fallbackEpochJd = 2461300.5;
 
-astorb.metaPathFor = function (binPath)
-{
+astorb.metaPathFor = function (binPath) {
     return binPath.replace(/\.bin$/i, ".meta.json");
 };
 
 // Load <dataset>.meta.json (epoch, snapshot, body elements), then call done().
-astorb.loadMeta = function (done)
-{
+astorb.loadMeta = function (done) {
     var metaPath = astorb.metaPathFor(astorb.resourcePath);
-    var finish = function (meta)
-    {
+    var finish = function (meta) {
         astorb.applyMeta(meta);
         done();
     };
-    if (typeof fetch !== "function")
-    {
+    if (typeof fetch !== "function") {
         finish(null);
         return;
     }
     fetch(metaPath, { cache: "no-cache" })
-        .then(function (response)
-        {
-            if (!response.ok)
-            {
+        .then(function (response) {
+            if (!response.ok) {
                 throw new Error("HTTP " + response.status);
             }
             return response.json();
         })
         .then(finish)
-        .catch(function (error)
-        {
+        .catch(function (error) {
             astorb.log("could not load '" + metaPath + "' (" + error.message + ")", "red");
             finish(null);
         });
 };
 
-astorb.applyMeta = function (meta)
-{
+astorb.applyMeta = function (meta) {
     var astro = astorb.astro;
     var valid = meta && Number.isFinite(meta.epochJd);
-    if (!valid)
-    {
+    if (!valid) {
         astorb.log(
             "dataset epoch unknown; assuming " + astro.isoDateFromJd(astorb.fallbackEpochJd),
             "red"
@@ -672,29 +594,23 @@ astorb.applyMeta = function (meta)
     astorb.buildDwarfPlanetOrbits(valid ? meta.bodies : null);
 
     // Open at today's date unless ?t= pins the sim date (seconds since the epoch).
-    if (astorb.options.t !== undefined)
-    {
+    if (astorb.options.t !== undefined) {
         astorb.time.simTime = astorb.options.t;
-    }
-    else
-    {
+    } else {
         var nowJd = astro.jdFromUnixMs(Date.now());
         astorb.time.simTime = (nowJd - astorb.epoch.jd) * astro.SECONDS_PER_DAY;
     }
     astorb.clampSimTime();
 
     var epochLabel = document.getElementById("dataEpoch");
-    if (epochLabel)
-    {
+    if (epochLabel) {
         epochLabel.textContent = astro.isoDateFromJd(astorb.epoch.jd);
     }
     var snapshotLabel = document.getElementById("dataSnapshot");
-    if (snapshotLabel)
-    {
+    if (snapshotLabel) {
         snapshotLabel.textContent = (valid && meta.snapshot && meta.snapshot.date) || "--";
     }
-    if (valid)
-    {
+    if (valid) {
         astorb.log(
             "dataset: " +
                 astorb.formatNumber(meta.recordCount) +
@@ -707,8 +623,7 @@ astorb.applyMeta = function (meta)
     }
 };
 
-astorb.loadAstorbData = function ()
-{
+astorb.loadAstorbData = function () {
     var resourcePath = astorb.resourcePath;
     astorb.log("loading '" + resourcePath + "'", "blue");
     astorb.showLoadingOverlay();
@@ -720,21 +635,17 @@ astorb.loadAstorbData = function ()
 };
 
 // Lightweight XHR loader with progress callbacks for the binary data file.
-astorb.Loader = function (path, inputCallback, inputProgressCallback)
-{
+astorb.Loader = function (path, inputCallback, inputProgressCallback) {
     this.path = path || null;
-    var callback = inputCallback || function ()
-    {};
-    var progressCallback = inputProgressCallback || function ()
-    {};
+    var callback = inputCallback || function () {};
+    var progressCallback = inputProgressCallback || function () {};
 
     var request = new XMLHttpRequest();
     this.request = request;
 
     // onload, onerror and ontimeout can each fire for one request; settle exactly once.
     var settled = false;
-    var settle = function (errorCode, response)
-    {
+    var settle = function (errorCode, response) {
         if (settled) return;
         settled = true;
         callback(errorCode, response);
@@ -745,24 +656,20 @@ astorb.Loader = function (path, inputCallback, inputProgressCallback)
     // The full catalog is ~38 MB; allow slow connections plenty of time.
     request.timeout = 300000;
 
-    request.onload = function ()
-    {
+    request.onload = function () {
         settle(request.status, request.response);
     };
 
-    request.onprogress = function (event)
-    {
+    request.onprogress = function (event) {
         var totalBytes = event.lengthComputable ? event.total : null;
         progressCallback(event.loaded, totalBytes);
     };
 
-    request.onerror = function ()
-    {
+    request.onerror = function () {
         settle(request.status || 0, null);
     };
 
-    request.ontimeout = function ()
-    {
+    request.ontimeout = function () {
         settle(408, null);
     };
 
@@ -770,24 +677,21 @@ astorb.Loader = function (path, inputCallback, inputProgressCallback)
 };
 
 // Convert binary orbital elements into GPU buffers and kick off animation.
-astorb.onLoadAstorbData = function (errorCode, response)
-{
+astorb.onLoadAstorbData = function (errorCode, response) {
     var bytesPerRecord = 24;
     if (
         errorCode == 200 &&
         response &&
         response instanceof ArrayBuffer &&
         response.byteLength % bytesPerRecord !== 0
-    )
-    {
+    ) {
         astorb.log(
             "dataset is " + response.byteLength + " bytes, not a whole number of records",
             "red"
         );
         errorCode = 0;
     }
-    if (errorCode == 200 && response && response instanceof ArrayBuffer)
-    {
+    if (errorCode == 200 && response && response instanceof ArrayBuffer) {
         astorb.log("loaded astorb data", "green");
         astorb.hideLoadingOverlay();
         astorb.dataLoaded = true;
@@ -798,8 +702,7 @@ astorb.onLoadAstorbData = function (errorCode, response)
         var astorbFloats = new Float32Array(response);
         var asteroidCount = response.byteLength / bytesPerRecord;
         astorb.log("asteroid count = " + astorb.formatNumber(asteroidCount), "black");
-        if (astorb.meta && astorb.meta.recordCount !== asteroidCount)
-        {
+        if (astorb.meta && astorb.meta.recordCount !== asteroidCount) {
             astorb.log("warning: metadata says " + astorb.meta.recordCount + " records", "red");
         }
         astorb.asteroidCount = asteroidCount;
@@ -807,8 +710,7 @@ astorb.onLoadAstorbData = function (errorCode, response)
         astorb.refreshAsteroidControls();
 
         // Debug: log first asteroid's orbital elements
-        if (asteroidCount > 0)
-        {
+        if (asteroidCount > 0) {
             astorb.log(
                 "First asteroid: M=" +
                     astorbFloats[0].toFixed(2) +
@@ -836,9 +738,7 @@ astorb.onLoadAstorbData = function (errorCode, response)
 
         astorb.frameCount = 0;
         requestAnimationFrame(astorb.animate);
-    }
-    else
-    {
+    } else {
         astorb.log("failed to load astorb data", "red");
         astorb.hideLoadingOverlay();
     }
@@ -877,21 +777,18 @@ astorb.time = {
 
 // Two-body drift and float32 phase error grow with time, so the reachable range is limited.
 astorb.simTimeLimitSeconds = 1000 * 365.25 * 86400;
-astorb.clampSimTime = function ()
-{
+astorb.clampSimTime = function () {
     var limit = astorb.simTimeLimitSeconds;
     astorb.time.simTime = Math.max(-limit, Math.min(limit, astorb.time.simTime));
 };
 
 // Julian Date the scene is showing.
-astorb.simJd = function ()
-{
+astorb.simJd = function () {
     return astorb.epoch.jd + astorb.time.simTime / 86400;
 };
 
 // Seconds since the epoch for "now".
-astorb.nowSimTime = function ()
-{
+astorb.nowSimTime = function () {
     return (astorb.astro.jdFromUnixMs(Date.now()) - astorb.epoch.jd) * 86400;
 };
 
@@ -909,8 +806,7 @@ window.__astorbDataLoaded = false;
 window.__astorbFirstFrameRendered = false;
 astorb.asteroidDrawCount = 0;
 
-astorb.initBuffers = function (gl)
-{
+astorb.initBuffers = function (gl) {
     var canvas = astorb.canvas;
     var aspectRatio = canvas.width / canvas.height;
 
@@ -941,27 +837,22 @@ astorb.initBuffers = function (gl)
     astorb.opacityUniform = gl.getUniformLocation(shaderProgram, "uOpacity");
     astorb.pointSizeUniform = gl.getUniformLocation(shaderProgram, "uPointSize");
 
-    if (astorb.colorModeUniform !== null)
-    {
+    if (astorb.colorModeUniform !== null) {
         gl.uniform1i(astorb.colorModeUniform, astorb.colorModeIndex || 0);
     }
-    if (astorb.farPlaneUniform !== null)
-    {
+    if (astorb.farPlaneUniform !== null) {
         gl.uniform1f(astorb.farPlaneUniform, astorb.farPlaneAU);
     }
-    if (astorb.opacityUniform !== null)
-    {
+    if (astorb.opacityUniform !== null) {
         gl.uniform1f(astorb.opacityUniform, 1.0);
     }
     astorb.applyPointSize();
 
-    if (astorb.bodyUniforms)
-    {
+    if (astorb.bodyUniforms) {
         gl.useProgram(astorb.bodyProgram);
         gl.uniformMatrix4fv(astorb.bodyUniforms.pMatrix, false, perspectiveMatrix);
         gl.uniform1f(astorb.bodyUniforms.pointScale, astorb.bodyScale);
-        if (astorb.bodyUniforms.opacity !== null)
-        {
+        if (astorb.bodyUniforms.opacity !== null) {
             gl.uniform1f(astorb.bodyUniforms.opacity, 1.0);
         }
     }
@@ -978,8 +869,7 @@ astorb.initBuffers = function (gl)
     astorb.updateViewMatrix();
 };
 
-astorb.configureAttributePointers = function (gl)
-{
+astorb.configureAttributePointers = function (gl) {
     // Each asteroid uses 6 floats: M, w, Ω, i, e, a (matching shader attributes). The stride
     // is always one record: density is controlled by the draw count, never by the stride
     // (WebGL caps strides at 255 bytes).
@@ -987,16 +877,13 @@ astorb.configureAttributePointers = function (gl)
     var floatsPerVertex = 6;
     var floatStride = floatsPerVertex * bytesPerFloat;
 
-    if (astorb.aMeanAnomaly >= 0)
-    {
+    if (astorb.aMeanAnomaly >= 0) {
         gl.vertexAttribPointer(astorb.aMeanAnomaly, 1, gl.FLOAT, false, floatStride, 0);
     }
-    if (astorb.aArgumentOfPerihelion >= 0)
-    {
+    if (astorb.aArgumentOfPerihelion >= 0) {
         gl.vertexAttribPointer(astorb.aArgumentOfPerihelion, 1, gl.FLOAT, false, floatStride, 4);
     }
-    if (astorb.aLongitudeOfAscendingNode >= 0)
-    {
+    if (astorb.aLongitudeOfAscendingNode >= 0) {
         gl.vertexAttribPointer(
             astorb.aLongitudeOfAscendingNode,
             1,
@@ -1006,16 +893,13 @@ astorb.configureAttributePointers = function (gl)
             8
         );
     }
-    if (astorb.aInclination >= 0)
-    {
+    if (astorb.aInclination >= 0) {
         gl.vertexAttribPointer(astorb.aInclination, 1, gl.FLOAT, false, floatStride, 12);
     }
-    if (astorb.aEccentricity >= 0)
-    {
+    if (astorb.aEccentricity >= 0) {
         gl.vertexAttribPointer(astorb.aEccentricity, 1, gl.FLOAT, false, floatStride, 16);
     }
-    if (astorb.aSemimajorAxis >= 0)
-    {
+    if (astorb.aSemimajorAxis >= 0) {
         gl.vertexAttribPointer(astorb.aSemimajorAxis, 1, gl.FLOAT, false, floatStride, 20);
     }
 };
@@ -1023,11 +907,9 @@ astorb.configureAttributePointers = function (gl)
 // Planet orbits (for orbit lines and labels) are the Standish elements at the epoch; planet
 // positions are recomputed for the sim date every frame (see updateBodies).
 astorb.planetOrbits = [];
-astorb.buildPlanetOrbits = function (epochJd)
-{
+astorb.buildPlanetOrbits = function (epochJd) {
     var astro = astorb.astro;
-    astorb.planetOrbits = astro.PLANET_NAMES.map(function (name)
-    {
+    astorb.planetOrbits = astro.PLANET_NAMES.map(function (name) {
         var elements = astro.planetElementsAt(name, epochJd);
         elements.name = name;
         return elements;
@@ -1046,13 +928,10 @@ astorb.fallbackDwarfPlanetOrbits = [
     { name: "Eris", a: 67.781, e: 0.44, i: 44.04, w: 151.6, O: 35.95, M: 204.4 },
 ];
 astorb.dwarfPlanetOrbits = astorb.fallbackDwarfPlanetOrbits;
-astorb.buildDwarfPlanetOrbits = function (bodies)
-{
-    astorb.dwarfPlanetOrbits = astorb.dwarfPlanetNames.map(function (name, index)
-    {
+astorb.buildDwarfPlanetOrbits = function (bodies) {
+    astorb.dwarfPlanetOrbits = astorb.dwarfPlanetNames.map(function (name, index) {
         var body = bodies && bodies[name];
-        if (!body)
-        {
+        if (!body) {
             return astorb.fallbackDwarfPlanetOrbits[index];
         }
         return {
@@ -1150,8 +1029,7 @@ astorb.moonBodies = [
     },
 ];
 
-astorb.initPlanetOrbits = function (gl)
-{
+astorb.initPlanetOrbits = function (gl) {
     var segments = 240;
     var floatsPerVertex = 6;
     var planetCount = astorb.planetOrbits.length;
@@ -1162,8 +1040,7 @@ astorb.initPlanetOrbits = function (gl)
     var offsets = [];
     var cursor = 0;
 
-    for (var planetIndex = 0; planetIndex < planetCount; planetIndex++)
-    {
+    for (var planetIndex = 0; planetIndex < planetCount; planetIndex++) {
         var planet = astorb.planetOrbits[planetIndex];
         offsets.push({
             name: planet.name,
@@ -1171,8 +1048,7 @@ astorb.initPlanetOrbits = function (gl)
             count: verticesPerOrbit,
         });
 
-        for (var segmentIndex = 0; segmentIndex < verticesPerOrbit; segmentIndex++)
-        {
+        for (var segmentIndex = 0; segmentIndex < verticesPerOrbit; segmentIndex++) {
             var meanAnomaly = 360.0 * (segmentIndex / segments);
             orbitData[cursor++] = meanAnomaly;
             orbitData[cursor++] = planet.w;
@@ -1192,8 +1068,7 @@ astorb.initPlanetOrbits = function (gl)
     astorb.planetOrbitSegments = segments;
 };
 
-astorb.initDwarfPlanetOrbits = function (gl)
-{
+astorb.initDwarfPlanetOrbits = function (gl) {
     var segments = 480;
     var floatsPerVertex = 6;
     var dwarfCount = astorb.dwarfPlanetOrbits.length;
@@ -1203,8 +1078,7 @@ astorb.initDwarfPlanetOrbits = function (gl)
     var offsets = [];
     var cursor = 0;
 
-    for (var orbitIndex = 0; orbitIndex < dwarfCount; orbitIndex++)
-    {
+    for (var orbitIndex = 0; orbitIndex < dwarfCount; orbitIndex++) {
         var orbit = astorb.dwarfPlanetOrbits[orbitIndex];
         offsets.push({
             name: orbit.name,
@@ -1212,8 +1086,7 @@ astorb.initDwarfPlanetOrbits = function (gl)
             count: verticesPerOrbit,
         });
 
-        for (var segmentIndex = 0; segmentIndex < verticesPerOrbit; segmentIndex++)
-        {
+        for (var segmentIndex = 0; segmentIndex < verticesPerOrbit; segmentIndex++) {
             var meanAnomaly = 360.0 * (segmentIndex / segments);
             orbitData[cursor++] = meanAnomaly;
             orbitData[cursor++] = orbit.w;
@@ -1233,8 +1106,7 @@ astorb.initDwarfPlanetOrbits = function (gl)
     astorb.dwarfPlanetOrbitSegments = segments;
 };
 
-astorb.initBodies = function (gl)
-{
+astorb.initBodies = function (gl) {
     var bodyList = astorb.bodies.concat(
         astorb.planetBodies,
         astorb.dwarfPlanetBodies,
@@ -1249,8 +1121,7 @@ astorb.initBodies = function (gl)
     astorb.bodyBuffer = bodyBuffer;
 };
 
-astorb.getScaledRadiusAu = function (radiusKm, sizeScale)
-{
+astorb.getScaledRadiusAu = function (radiusKm, sizeScale) {
     var logRadius = Math.log(radiusKm) / Math.LN10;
     var scaledKm = logRadius * astorb.radiusScale.km;
     var scale = sizeScale === undefined ? 1.0 : sizeScale;
@@ -1259,26 +1130,22 @@ astorb.getScaledRadiusAu = function (radiusKm, sizeScale)
 
 // Position of a dwarf planet (elements at its own epoch, normally the dataset epoch) at the
 // current sim time, using the shared, tested solver in astorb-astro.js.
-astorb.computeKeplerPosition = function (orbit, timeSec)
-{
+astorb.computeKeplerPosition = function (orbit, timeSec) {
     var epochOffsetSec = orbit.epochJd ? (astorb.epoch.jd - orbit.epochJd) * 86400 : 0;
     return astorb.astro.keplerPosition(orbit, timeSec + epochOffsetSec);
 };
 
 // A point on an orbit at a given mean anomaly (degrees); used for orbit labels.
-astorb.computeOrbitPoint = function (orbit, meanAnomalyDeg)
-{
+astorb.computeOrbitPoint = function (orbit, meanAnomalyDeg) {
     return astorb.astro.keplerPosition(
         { a: orbit.a, e: orbit.e, i: orbit.i, w: orbit.w, O: orbit.O, M: meanAnomalyDeg },
         0
     );
 };
 
-astorb.initOrbitLabels = function ()
-{
+astorb.initOrbitLabels = function () {
     var labelLayer = document.getElementById("labelLayer");
-    if (!labelLayer)
-    {
+    if (!labelLayer) {
         return;
     }
 
@@ -1286,8 +1153,7 @@ astorb.initOrbitLabels = function ()
     labelLayer.innerHTML = "";
 
     var labels = [];
-    var addLabel = function (name, orbit, segments)
-    {
+    var addLabel = function (name, orbit, segments) {
         var label = document.createElement("div");
         label.className = "orbit-label";
         label.textContent = name;
@@ -1300,8 +1166,7 @@ astorb.initOrbitLabels = function ()
         });
     };
 
-    for (var planetIndex = 0; planetIndex < astorb.planetOrbits.length; planetIndex++)
-    {
+    for (var planetIndex = 0; planetIndex < astorb.planetOrbits.length; planetIndex++) {
         addLabel(
             astorb.planetOrbits[planetIndex].name,
             astorb.planetOrbits[planetIndex],
@@ -1309,8 +1174,7 @@ astorb.initOrbitLabels = function ()
         );
     }
 
-    for (var dwarfIndex = 0; dwarfIndex < astorb.dwarfPlanetOrbits.length; dwarfIndex++)
-    {
+    for (var dwarfIndex = 0; dwarfIndex < astorb.dwarfPlanetOrbits.length; dwarfIndex++) {
         addLabel(
             astorb.dwarfPlanetOrbits[dwarfIndex].name,
             astorb.dwarfPlanetOrbits[dwarfIndex],
@@ -1322,15 +1186,12 @@ astorb.initOrbitLabels = function ()
     labelLayer.style.display = astorb.showOrbitLabels ? "block" : "none";
 };
 
-astorb.updateOrbitLabels = function ()
-{
-    if (!astorb.showOrbitLabels)
-    {
+astorb.updateOrbitLabels = function () {
+    if (!astorb.showOrbitLabels) {
         return;
     }
 
-    if (!astorb.orbitLabels || !astorb.projectionMatrix || !astorb.mvMatrix || !astorb.canvas)
-    {
+    if (!astorb.orbitLabels || !astorb.projectionMatrix || !astorb.mvMatrix || !astorb.canvas) {
         return;
     }
 
@@ -1342,39 +1203,34 @@ astorb.updateOrbitLabels = function ()
     var width = rect.width;
     var height = rect.height;
 
-    for (var labelIndex = 0; labelIndex < astorb.orbitLabels.length; labelIndex++)
-    {
+    for (var labelIndex = 0; labelIndex < astorb.orbitLabels.length; labelIndex++) {
         var labelInfo = astorb.orbitLabels[labelIndex];
         var orbit = labelInfo.orbit;
         var segments = labelInfo.segments || 240;
         var minDistance = Infinity;
         var closestPoint = null;
 
-        for (var segmentIndex = 0; segmentIndex <= segments; segmentIndex++)
-        {
+        for (var segmentIndex = 0; segmentIndex <= segments; segmentIndex++) {
             var meanAnomaly = 360.0 * (segmentIndex / segments);
             var point = astorb.computeOrbitPoint(orbit, meanAnomaly);
             var dx = point[0] - cameraPosition[0];
             var dy = point[1] - cameraPosition[1];
             var dz = point[2] - cameraPosition[2];
             var distance = dx * dx + dy * dy + dz * dz;
-            if (distance < minDistance)
-            {
+            if (distance < minDistance) {
                 minDistance = distance;
                 closestPoint = point;
             }
         }
 
-        if (!closestPoint)
-        {
+        if (!closestPoint) {
             labelInfo.element.style.display = "none";
             continue;
         }
 
         var clip = vec4.fromValues(closestPoint[0], closestPoint[1], closestPoint[2], 1.0);
         vec4.transformMat4(clip, clip, viewProjection);
-        if (clip[3] <= 0.0)
-        {
+        if (clip[3] <= 0.0) {
             labelInfo.element.style.display = "none";
             continue;
         }
@@ -1383,8 +1239,7 @@ astorb.updateOrbitLabels = function ()
         var ndcY = clip[1] / clip[3];
         var ndcZ = clip[2] / clip[3];
 
-        if (ndcZ < -1 || ndcZ > 1)
-        {
+        if (ndcZ < -1 || ndcZ > 1) {
             labelInfo.element.style.display = "none";
             continue;
         }
@@ -1399,8 +1254,7 @@ astorb.updateOrbitLabels = function ()
     }
 };
 
-astorb.computeMoonPosition = function (moon, parentPosition, timeSec)
-{
+astorb.computeMoonPosition = function (moon, parentPosition, timeSec) {
     var periodSec = Math.abs(moon.periodDays) * 24.0 * 3600.0;
     var direction = moon.periodDays < 0 ? -1.0 : 1.0;
     var meanMotion = ((2.0 * Math.PI) / periodSec) * direction;
@@ -1415,8 +1269,7 @@ astorb.computeMoonPosition = function (moon, parentPosition, timeSec)
 };
 
 // Refresh the per-frame planet/dwarf/moon buffer for the body shader.
-astorb.updateBodies = function (timeSec)
-{
+astorb.updateBodies = function (timeSec) {
     var gl = astorb.gl;
     if (!astorb.bodyBuffer) return;
 
@@ -1436,8 +1289,7 @@ astorb.updateBodies = function (timeSec)
 
     // Planets: Standish elements and rates evaluated at the sim date (float64, in JS).
     var simJd = astorb.epoch.jd + timeSec / 86400;
-    for (var planetIndex = 0; planetIndex < astorb.planetBodies.length; planetIndex++)
-    {
+    for (var planetIndex = 0; planetIndex < astorb.planetBodies.length; planetIndex++) {
         var planet = astorb.planetBodies[planetIndex];
         var position = astorb.astro.planetPosition(planet.name, simJd);
         positions[planet.name] = position;
@@ -1451,8 +1303,7 @@ astorb.updateBodies = function (timeSec)
         bodyData[cursor++] = planet.color[2];
     }
 
-    for (var dwarfIndex = 0; dwarfIndex < astorb.dwarfPlanetBodies.length; dwarfIndex++)
-    {
+    for (var dwarfIndex = 0; dwarfIndex < astorb.dwarfPlanetBodies.length; dwarfIndex++) {
         var dwarf = astorb.dwarfPlanetBodies[dwarfIndex];
         var dwarfOrbit = astorb.dwarfPlanetOrbits[dwarfIndex];
         var dwarfPosition = astorb.computeKeplerPosition(dwarfOrbit, timeSec);
@@ -1467,8 +1318,7 @@ astorb.updateBodies = function (timeSec)
         bodyData[cursor++] = dwarf.color[2];
     }
 
-    for (var moonIndex = 0; moonIndex < astorb.moonBodies.length; moonIndex++)
-    {
+    for (var moonIndex = 0; moonIndex < astorb.moonBodies.length; moonIndex++) {
         var moon = astorb.moonBodies[moonIndex];
         var parentPosition = positions[moon.parent] || [0.0, 0.0, 0.0];
         var moonPosition = astorb.computeMoonPosition(moon, parentPosition, timeSec);
@@ -1487,13 +1337,11 @@ astorb.updateBodies = function (timeSec)
 };
 
 // Set up pointer, touch, wheel, and keyboard interactions for the camera.
-astorb.setupCameraControls = function (canvas)
-{
+astorb.setupCameraControls = function (canvas) {
     var camera = astorb.camera;
 
     // Mouse down - start dragging
-    canvas.addEventListener("mousedown", function (event)
-    {
+    canvas.addEventListener("mousedown", function (event) {
         camera.isDragging = true;
         camera.lastMouseX = event.clientX;
         camera.lastMouseY = event.clientY;
@@ -1502,14 +1350,12 @@ astorb.setupCameraControls = function (canvas)
     });
 
     // Mouse up - stop dragging
-    window.addEventListener("mouseup", function ()
-    {
+    window.addEventListener("mouseup", function () {
         camera.isDragging = false;
     });
 
     // Mouse move - rotate camera
-    canvas.addEventListener("mousemove", function (event)
-    {
+    canvas.addEventListener("mousemove", function (event) {
         if (!camera.isDragging) return;
 
         var deltaX = event.clientX - camera.lastMouseX;
@@ -1543,18 +1389,14 @@ astorb.setupCameraControls = function (canvas)
 
     canvas.addEventListener(
         "touchstart",
-        function (event)
-        {
-            if (event.touches.length === 1)
-            {
+        function (event) {
+            if (event.touches.length === 1) {
                 var touch = event.touches[0];
                 touchState.isDragging = true;
                 touchState.isPinching = false;
                 touchState.lastX = touch.clientX;
                 touchState.lastY = touch.clientY;
-            }
-            else if (event.touches.length === 2)
-            {
+            } else if (event.touches.length === 2) {
                 var dx = event.touches[0].clientX - event.touches[1].clientX;
                 var dy = event.touches[0].clientY - event.touches[1].clientY;
                 touchState.lastDistance = Math.sqrt(dx * dx + dy * dy);
@@ -1568,10 +1410,8 @@ astorb.setupCameraControls = function (canvas)
 
     canvas.addEventListener(
         "touchmove",
-        function (event)
-        {
-            if (event.touches.length === 1 && touchState.isDragging)
-            {
+        function (event) {
+            if (event.touches.length === 1 && touchState.isDragging) {
                 var touch = event.touches[0];
                 var deltaX = touch.clientX - touchState.lastX;
                 var deltaY = touch.clientY - touchState.lastY;
@@ -1586,15 +1426,12 @@ astorb.setupCameraControls = function (canvas)
                 touchState.lastX = touch.clientX;
                 touchState.lastY = touch.clientY;
                 astorb.updateViewMatrix();
-            }
-            else if (event.touches.length === 2 && touchState.isPinching)
-            {
+            } else if (event.touches.length === 2 && touchState.isPinching) {
                 var dx = event.touches[0].clientX - event.touches[1].clientX;
                 var dy = event.touches[0].clientY - event.touches[1].clientY;
                 var distance = Math.sqrt(dx * dx + dy * dy);
 
-                if (touchState.lastDistance > 0)
-                {
+                if (touchState.lastDistance > 0) {
                     var zoomDelta = (touchState.lastDistance - distance) * 0.002;
                     camera.distance += zoomDelta * camera.distance;
                     camera.distance = Math.max(
@@ -1613,10 +1450,8 @@ astorb.setupCameraControls = function (canvas)
 
     canvas.addEventListener(
         "touchend",
-        function (event)
-        {
-            if (event.touches.length === 0)
-            {
+        function (event) {
+            if (event.touches.length === 0) {
                 touchState.isDragging = false;
                 touchState.isPinching = false;
                 touchState.lastDistance = 0;
@@ -1626,8 +1461,7 @@ astorb.setupCameraControls = function (canvas)
     );
 
     // Mouse wheel - zoom
-    canvas.addEventListener("wheel", function (event)
-    {
+    canvas.addEventListener("wheel", function (event) {
         var zoomSpeed = 0.001;
         camera.distance += event.deltaY * zoomSpeed * camera.distance;
         camera.distance = Math.max(
@@ -1641,8 +1475,7 @@ astorb.setupCameraControls = function (canvas)
 
     // Keyboard controls. One listener on window: a canvas listener as well would see every key
     // twice when the canvas has focus (keydown bubbles to window).
-    var isEditableTarget = function (target)
-    {
+    var isEditableTarget = function (target) {
         if (!target || !target.tagName) return false;
         var tag = target.tagName.toLowerCase();
         return (
@@ -1654,22 +1487,18 @@ astorb.setupCameraControls = function (canvas)
             target.isContentEditable === true
         );
     };
-    var handleKeydown = function (event)
-    {
+    var handleKeydown = function (event) {
         var time = astorb.time;
         // Let focused controls keep their own keys (Space/Enter activate buttons).
-        if (isEditableTarget(event.target) || event.ctrlKey || event.metaKey || event.altKey)
-        {
+        if (isEditableTarget(event.target) || event.ctrlKey || event.metaKey || event.altKey) {
             return;
         }
         // Toggles fire once per press, not on auto-repeat.
-        if (event.repeat && (event.key === " " || /^[cCrR0oO]$/.test(event.key)))
-        {
+        if (event.repeat && (event.key === " " || /^[cCrR0oO]$/.test(event.key))) {
             event.preventDefault();
             return;
         }
-        switch (event.key)
-        {
+        switch (event.key) {
             case " ": // Space - pause/resume
                 time.paused = !time.paused;
                 astorb.log("Time " + (time.paused ? "paused" : "resumed"), "blue");
@@ -1715,64 +1544,52 @@ astorb.setupCameraControls = function (canvas)
     );
 };
 
-astorb.jumpToNow = function ()
-{
+astorb.jumpToNow = function () {
     astorb.time.simTime = astorb.nowSimTime();
     astorb.clampSimTime();
     astorb.log("Sim date set to now", "blue");
     astorb.refreshTimeControls();
 };
 
-astorb.setupTimeControls = function ()
-{
+astorb.setupTimeControls = function () {
     var pauseButton = document.getElementById("pauseButton");
     var slowButton = document.getElementById("slowButton");
     var fastButton = document.getElementById("fastButton");
     var resetButton = document.getElementById("resetTimeButton");
     var invertButton = document.getElementById("invertTimeButton");
 
-    if (pauseButton)
-    {
-        pauseButton.addEventListener("click", function ()
-        {
+    if (pauseButton) {
+        pauseButton.addEventListener("click", function () {
             astorb.time.paused = !astorb.time.paused;
             astorb.log("Time " + (astorb.time.paused ? "paused" : "resumed"), "blue");
             astorb.refreshTimeControls();
         });
     }
 
-    if (slowButton)
-    {
-        slowButton.addEventListener("click", function ()
-        {
+    if (slowButton) {
+        slowButton.addEventListener("click", function () {
             astorb.time.timeScale /= 2;
             astorb.log("Time scale: " + astorb.time.timeScale.toExponential(1), "blue");
             astorb.refreshTimeControls();
         });
     }
 
-    if (fastButton)
-    {
-        fastButton.addEventListener("click", function ()
-        {
+    if (fastButton) {
+        fastButton.addEventListener("click", function () {
             astorb.time.timeScale *= 2;
             astorb.log("Time scale: " + astorb.time.timeScale.toExponential(1), "blue");
             astorb.refreshTimeControls();
         });
     }
 
-    if (resetButton)
-    {
-        resetButton.addEventListener("click", function ()
-        {
+    if (resetButton) {
+        resetButton.addEventListener("click", function () {
             astorb.jumpToNow();
         });
     }
 
-    if (invertButton)
-    {
-        invertButton.addEventListener("click", function ()
-        {
+    if (invertButton) {
+        invertButton.addEventListener("click", function () {
             astorb.time.timeScale = -astorb.time.timeScale;
             var directionLabel = astorb.time.timeScale >= 0 ? "Forward" : "Reverse";
             astorb.log("Time direction: " + directionLabel, "blue");
@@ -1783,35 +1600,29 @@ astorb.setupTimeControls = function ()
     astorb.refreshTimeControls();
 };
 
-astorb.setupControlPanelToggle = function ()
-{
+astorb.setupControlPanelToggle = function () {
     var panel = document.getElementById("controlPanel");
     var toggleButton = document.getElementById("controlPanelToggle");
-    if (!panel || !toggleButton)
-    {
+    if (!panel || !toggleButton) {
         return;
     }
 
     var mediaQuery = window.matchMedia("(max-width: 640px)");
 
-    var applyCollapsedState = function (collapsed)
-    {
+    var applyCollapsedState = function (collapsed) {
         astorb.controlPanelCollapsed = collapsed;
         panel.classList.toggle("collapsed", collapsed);
         toggleButton.textContent = "Controls: " + (collapsed ? "Show" : "Hide");
         toggleButton.setAttribute("aria-expanded", (!collapsed).toString());
     };
 
-    var refreshForViewport = function ()
-    {
-        if (!mediaQuery.matches)
-        {
+    var refreshForViewport = function () {
+        if (!mediaQuery.matches) {
             applyCollapsedState(false);
             return;
         }
 
-        if (typeof astorb.controlPanelCollapsed !== "boolean")
-        {
+        if (typeof astorb.controlPanelCollapsed !== "boolean") {
             applyCollapsedState(true);
             return;
         }
@@ -1819,17 +1630,13 @@ astorb.setupControlPanelToggle = function ()
         applyCollapsedState(astorb.controlPanelCollapsed);
     };
 
-    toggleButton.addEventListener("click", function ()
-    {
+    toggleButton.addEventListener("click", function () {
         applyCollapsedState(!astorb.controlPanelCollapsed);
     });
 
-    if (mediaQuery.addEventListener)
-    {
+    if (mediaQuery.addEventListener) {
         mediaQuery.addEventListener("change", refreshForViewport);
-    }
-    else if (mediaQuery.addListener)
-    {
+    } else if (mediaQuery.addListener) {
         mediaQuery.addListener(refreshForViewport);
     }
 
@@ -1838,13 +1645,11 @@ astorb.setupControlPanelToggle = function ()
 
 // Density control: draw a prefix of the dataset (drawArrays(0, n)) at the normal stride.
 // Halving the count instead of doubling the stride keeps every draw valid in WebGL.
-astorb.setupAsteroidControls = function ()
-{
+astorb.setupAsteroidControls = function () {
     var halfButton = document.getElementById("asteroidHalfButton");
     var doubleButton = document.getElementById("asteroidDoubleButton");
 
-    var logCount = function ()
-    {
+    var logCount = function () {
         astorb.log(
             "Asteroid draw count: " +
                 astorb.formatNumber(astorb.asteroidDrawCount) +
@@ -1855,20 +1660,16 @@ astorb.setupAsteroidControls = function ()
         astorb.refreshAsteroidControls();
     };
 
-    if (halfButton)
-    {
-        halfButton.addEventListener("click", function ()
-        {
+    if (halfButton) {
+        halfButton.addEventListener("click", function () {
             if (!astorb.asteroidCount) return;
             astorb.asteroidDrawCount = Math.max(1, Math.ceil(astorb.asteroidDrawCount / 2));
             logCount();
         });
     }
 
-    if (doubleButton)
-    {
-        doubleButton.addEventListener("click", function ()
-        {
+    if (doubleButton) {
+        doubleButton.addEventListener("click", function () {
             var total = astorb.asteroidCount || 0;
             if (!total) return;
             astorb.asteroidDrawCount = Math.min(total, astorb.asteroidDrawCount * 2);
@@ -1879,14 +1680,11 @@ astorb.setupAsteroidControls = function ()
     astorb.refreshAsteroidControls();
 };
 
-astorb.setupDepthBufferControls = function ()
-{
+astorb.setupDepthBufferControls = function () {
     var depthButton = document.getElementById("depthBufferButton");
 
-    if (depthButton)
-    {
-        depthButton.addEventListener("click", function ()
-        {
+    if (depthButton) {
+        depthButton.addEventListener("click", function () {
             astorb.depthBufferEnabled = !astorb.depthBufferEnabled;
             astorb.applyDepthBufferState();
             astorb.refreshDepthBufferControls();
@@ -1900,14 +1698,11 @@ astorb.setupDepthBufferControls = function ()
     astorb.refreshDepthBufferControls();
 };
 
-astorb.setupMotionBlurControls = function ()
-{
+astorb.setupMotionBlurControls = function () {
     var motionBlurButton = document.getElementById("motionBlurButton");
 
-    if (motionBlurButton)
-    {
-        motionBlurButton.addEventListener("click", function ()
-        {
+    if (motionBlurButton) {
+        motionBlurButton.addEventListener("click", function () {
             astorb.motionBlur.enabled = !astorb.motionBlur.enabled;
             astorb.refreshMotionBlurControls();
             astorb.log(
@@ -1929,8 +1724,7 @@ astorb.colorModes = [
 ];
 astorb.colorModeIndex = 3;
 
-astorb.applyColorMode = function ()
-{
+astorb.applyColorMode = function () {
     var gl = astorb.gl;
     if (!gl || astorb.colorModeUniform === null) return;
 
@@ -1939,14 +1733,11 @@ astorb.applyColorMode = function ()
     gl.uniform1i(astorb.colorModeUniform, mode.id);
 };
 
-astorb.setupRenderColorControls = function ()
-{
+astorb.setupRenderColorControls = function () {
     var renderButton = document.getElementById("renderColorButton");
 
-    if (renderButton)
-    {
-        renderButton.addEventListener("click", function ()
-        {
+    if (renderButton) {
+        renderButton.addEventListener("click", function () {
             astorb.colorModeIndex = (astorb.colorModeIndex + 1) % astorb.colorModes.length;
             astorb.applyColorMode();
             astorb.refreshRenderColorControls();
@@ -1957,25 +1748,20 @@ astorb.setupRenderColorControls = function ()
     astorb.refreshRenderColorControls();
 };
 
-astorb.applyPointSize = function ()
-{
+astorb.applyPointSize = function () {
     var gl = astorb.gl;
-    if (!gl || astorb.pointSizeUniform === null)
-    {
+    if (!gl || astorb.pointSizeUniform === null) {
         return;
     }
     gl.useProgram(astorb.asteroidProgram);
     gl.uniform1f(astorb.pointSizeUniform, astorb.pointSize);
 };
 
-astorb.setupPointSizeControls = function ()
-{
+astorb.setupPointSizeControls = function () {
     var pointButton = document.getElementById("pointSizeButton");
 
-    if (pointButton)
-    {
-        pointButton.addEventListener("click", function ()
-        {
+    if (pointButton) {
+        pointButton.addEventListener("click", function () {
             astorb.pointSizeIndex = (astorb.pointSizeIndex + 1) % astorb.pointSizes.length;
             astorb.pointSize = astorb.pointSizes[astorb.pointSizeIndex];
             astorb.applyPointSize();
@@ -1987,17 +1773,13 @@ astorb.setupPointSizeControls = function ()
     astorb.refreshPointSizeControls();
 };
 
-astorb.setupOrbitLabelControls = function ()
-{
+astorb.setupOrbitLabelControls = function () {
     var labelButton = document.getElementById("orbitLabelButton");
 
-    if (labelButton)
-    {
-        labelButton.addEventListener("click", function ()
-        {
+    if (labelButton) {
+        labelButton.addEventListener("click", function () {
             astorb.showOrbitLabels = !astorb.showOrbitLabels;
-            if (typeof astorb.log === "function")
-            {
+            if (typeof astorb.log === "function") {
                 astorb.log(
                     "Orbit labels " + (astorb.showOrbitLabels ? "enabled" : "disabled"),
                     "blue"
@@ -2010,44 +1792,34 @@ astorb.setupOrbitLabelControls = function ()
     astorb.refreshOrbitLabelControls();
 };
 
-astorb.applyTheme = function ()
-{
+astorb.applyTheme = function () {
     var body = document.body;
     if (!body) return;
 
-    if (astorb.isDarkTheme)
-    {
+    if (astorb.isDarkTheme) {
         body.classList.add("dark-theme");
-    }
-    else
-    {
+    } else {
         body.classList.remove("dark-theme");
     }
 
     var themeButton = document.getElementById("themeToggleButton");
-    if (themeButton)
-    {
+    if (themeButton) {
         themeButton.textContent = "Theme: " + (astorb.isDarkTheme ? "Dark" : "Light");
     }
 };
 
-astorb.setupThemeControls = function ()
-{
+astorb.setupThemeControls = function () {
     var themeButton = document.getElementById("themeToggleButton");
     if (!themeButton) return;
 
     var storedTheme = localStorage.getItem("astorb-theme");
-    if (storedTheme)
-    {
+    if (storedTheme) {
         astorb.isDarkTheme = storedTheme === "dark";
-    }
-    else if (window.matchMedia)
-    {
+    } else if (window.matchMedia) {
         astorb.isDarkTheme = window.matchMedia("(prefers-color-scheme: dark)").matches;
     }
 
-    themeButton.addEventListener("click", function ()
-    {
+    themeButton.addEventListener("click", function () {
         astorb.isDarkTheme = !astorb.isDarkTheme;
         astorb.applyTheme();
         localStorage.setItem("astorb-theme", astorb.isDarkTheme ? "dark" : "light");
@@ -2056,37 +1828,31 @@ astorb.setupThemeControls = function ()
     astorb.applyTheme();
 };
 
-astorb.toggleCinematicMode = function ()
-{
+astorb.toggleCinematicMode = function () {
     astorb.cinematicMode.enabled = !astorb.cinematicMode.enabled;
     astorb.refreshCinematicControls();
     astorb.log("Cinematic mode " + (astorb.cinematicMode.enabled ? "enabled" : "disabled"), "blue");
 };
 
-astorb.setupCinematicControls = function ()
-{
+astorb.setupCinematicControls = function () {
     var cinematicButton = document.getElementById("cinematicModeButton");
     if (!cinematicButton) return;
 
-    cinematicButton.addEventListener("click", function ()
-    {
+    cinematicButton.addEventListener("click", function () {
         astorb.toggleCinematicMode();
     });
 
     astorb.refreshCinematicControls();
 };
 
-astorb.refreshCinematicControls = function ()
-{
+astorb.refreshCinematicControls = function () {
     var cinematicButton = document.getElementById("cinematicModeButton");
-    if (cinematicButton)
-    {
+    if (cinematicButton) {
         cinematicButton.textContent = "Cinematic: " + (astorb.cinematicMode.enabled ? "On" : "Off");
     }
 };
 
-astorb.activateSurpriseMode = function ()
-{
+astorb.activateSurpriseMode = function () {
     astorb.colorModeIndex = Math.floor(Math.random() * astorb.colorModes.length);
     astorb.pointSizeIndex = Math.floor(Math.random() * astorb.pointSizes.length);
     astorb.pointSize = astorb.pointSizes[astorb.pointSizeIndex];
@@ -2108,20 +1874,17 @@ astorb.activateSurpriseMode = function ()
     );
 };
 
-astorb.setupSurpriseControls = function ()
-{
+astorb.setupSurpriseControls = function () {
     var surpriseButton = document.getElementById("surpriseButton");
     if (!surpriseButton) return;
 
-    surpriseButton.addEventListener("click", function ()
-    {
+    surpriseButton.addEventListener("click", function () {
         astorb.activateSurpriseMode();
     });
 };
 
 astorb.stats = null;
-astorb.initStats = function ()
-{
+astorb.initStats = function () {
     if (typeof Stats === "undefined") return;
 
     var stats = new Stats();
@@ -2134,8 +1897,7 @@ astorb.initStats = function ()
     astorb.stats = stats;
 };
 
-astorb.refreshTimeControls = function ()
-{
+astorb.refreshTimeControls = function () {
     var pauseButton = document.getElementById("pauseButton");
     var timeScaleLabel = document.getElementById("timeScaleLabel");
     var invertButton = document.getElementById("invertTimeButton");
@@ -2143,35 +1905,29 @@ astorb.refreshTimeControls = function ()
     var directionLabel = timeScale >= 0 ? "Forward" : "Reverse";
     var magnitude = Math.abs(timeScale);
 
-    if (pauseButton)
-    {
+    if (pauseButton) {
         pauseButton.textContent = astorb.time.paused ? "Resume" : "Pause";
     }
 
-    if (timeScaleLabel)
-    {
+    if (timeScaleLabel) {
         timeScaleLabel.textContent =
             "Speed: " + magnitude.toExponential(1) + "x (" + directionLabel + ")";
     }
 
-    if (invertButton)
-    {
+    if (invertButton) {
         invertButton.textContent = "Direction: " + directionLabel;
     }
 };
 
-astorb.refreshAsteroidControls = function ()
-{
+astorb.refreshAsteroidControls = function () {
     var halfButton = document.getElementById("asteroidHalfButton");
     var doubleButton = document.getElementById("asteroidDoubleButton");
     var asteroidCountLabel = document.getElementById("asteroidCountLabel");
     var total = astorb.asteroidCount || 0;
     var current = astorb.asteroidDrawCount || 0;
 
-    if (asteroidCountLabel)
-    {
-        if (total)
-        {
+    if (asteroidCountLabel) {
+        if (total) {
             var percent = astorb.formatAsteroidPercent(current, total);
             asteroidCountLabel.textContent =
                 "Asteroids: " +
@@ -2181,91 +1937,73 @@ astorb.refreshAsteroidControls = function ()
                 " (" +
                 percent +
                 ")";
-        }
-        else
-        {
+        } else {
             asteroidCountLabel.textContent = "Asteroids: --";
         }
     }
 
-    if (halfButton)
-    {
+    if (halfButton) {
         halfButton.disabled = !total || current <= 1;
     }
 
-    if (doubleButton)
-    {
+    if (doubleButton) {
         doubleButton.disabled = !total || current >= total;
     }
 };
 
-astorb.refreshDepthBufferControls = function ()
-{
+astorb.refreshDepthBufferControls = function () {
     var depthButton = document.getElementById("depthBufferButton");
 
-    if (depthButton)
-    {
+    if (depthButton) {
         depthButton.textContent = "Depth: " + (astorb.depthBufferEnabled ? "On" : "Off");
     }
 };
 
-astorb.refreshMotionBlurControls = function ()
-{
+astorb.refreshMotionBlurControls = function () {
     var motionBlurButton = document.getElementById("motionBlurButton");
 
-    if (motionBlurButton)
-    {
+    if (motionBlurButton) {
         motionBlurButton.textContent = "Motion Blur: " + (astorb.motionBlur.enabled ? "On" : "Off");
     }
 };
 
-astorb.refreshRenderColorControls = function ()
-{
+astorb.refreshRenderColorControls = function () {
     var renderButton = document.getElementById("renderColorButton");
 
-    if (renderButton)
-    {
+    if (renderButton) {
         var mode = astorb.colorModes[astorb.colorModeIndex] || astorb.colorModes[0];
         renderButton.textContent = mode.label;
     }
 };
 
-astorb.refreshPointSizeControls = function ()
-{
+astorb.refreshPointSizeControls = function () {
     var pointButton = document.getElementById("pointSizeButton");
 
-    if (pointButton)
-    {
+    if (pointButton) {
         pointButton.textContent = "Point Size: " + astorb.pointSize + "px";
     }
 };
 
-astorb.refreshOrbitLabelControls = function ()
-{
+astorb.refreshOrbitLabelControls = function () {
     var labelButton = document.getElementById("orbitLabelButton");
     var labelLayer = astorb.labelLayer;
 
-    if (labelButton)
-    {
+    if (labelButton) {
         labelButton.textContent = "Labels: " + (astorb.showOrbitLabels ? "On" : "Off");
     }
 
-    if (labelLayer)
-    {
+    if (labelLayer) {
         labelLayer.style.display = astorb.showOrbitLabels ? "block" : "none";
     }
 
-    if (!astorb.showOrbitLabels && astorb.orbitLabels)
-    {
-        for (var labelIndex = 0; labelIndex < astorb.orbitLabels.length; labelIndex++)
-        {
+    if (!astorb.showOrbitLabels && astorb.orbitLabels) {
+        for (var labelIndex = 0; labelIndex < astorb.orbitLabels.length; labelIndex++) {
             astorb.orbitLabels[labelIndex].element.style.display = "none";
         }
     }
 };
 
-astorb.updateViewMatrix = function ()
-{
+astorb.updateViewMatrix = function () {
     var gl = astorb.gl;
     var camera = astorb.camera;
 
@@ -2280,8 +2018,7 @@ astorb.updateViewMatrix = function ()
     camera.elevation = Math.max(-maxElev, Math.min(maxElev, camera.elevation));
 
     // Wrap azimuth for numeric stability (keep it from growing unbounded).
-    if (Math.abs(camera.azimuth) > Math.PI * 64)
-    {
+    if (Math.abs(camera.azimuth) > Math.PI * 64) {
         camera.azimuth = ((camera.azimuth % (2.0 * Math.PI)) + 2.0 * Math.PI) % (2.0 * Math.PI);
         if (camera.azimuth > Math.PI) camera.azimuth -= 2.0 * Math.PI;
     }
@@ -2316,8 +2053,7 @@ astorb.updateViewMatrix = function ()
     vec3.normalize(s, s);
 
     // Handle the degenerate case when looking straight up or down (f parallel to up).
-    if (vec3.length(s) < 0.0001)
-    {
+    if (vec3.length(s) < 0.0001) {
         // Fallback: use Y as the right vector when looking along Z.
         s = vec3.fromValues(1.0, 0.0, 0.0);
     }
@@ -2353,16 +2089,14 @@ astorb.updateViewMatrix = function ()
     gl.useProgram(astorb.asteroidProgram);
     gl.uniformMatrix4fv(astorb.mvUniform, false, mvMatrix);
 
-    if (astorb.bodyUniforms)
-    {
+    if (astorb.bodyUniforms) {
         gl.useProgram(astorb.bodyProgram);
         gl.uniformMatrix4fv(astorb.bodyUniforms.mvMatrix, false, mvMatrix);
     }
 };
 
 // Main render loop: advance time, update buffers, draw orbits + bodies + asteroids.
-astorb.animate = function (timestamp)
-{
+astorb.animate = function (timestamp) {
     var gl = astorb.gl;
     var asteroidCount = astorb.asteroidCount;
     var asteroidDrawCount = astorb.asteroidDrawCount || asteroidCount;
@@ -2370,8 +2104,7 @@ astorb.animate = function (timestamp)
     var stats = astorb.stats;
     var motionBlur = astorb.motionBlur;
 
-    if (stats)
-    {
+    if (stats) {
         stats.begin();
     }
 
@@ -2379,8 +2112,7 @@ astorb.animate = function (timestamp)
     astorb.resizeWebGL();
 
     // Calculate delta time
-    if (time.lastTimestamp === 0)
-    {
+    if (time.lastTimestamp === 0) {
         time.lastTimestamp = timestamp;
     }
     // Wall-clock seconds since the last frame, clamped so returning to a background tab
@@ -2390,15 +2122,13 @@ astorb.animate = function (timestamp)
     var simDelta = 0;
 
     // Update simulation time if not paused
-    if (!time.paused)
-    {
+    if (!time.paused) {
         simDelta = deltaTime * time.timeScale;
         time.simTime += simDelta;
         astorb.clampSimTime();
     }
 
-    if (astorb.cinematicMode.enabled)
-    {
+    if (astorb.cinematicMode.enabled) {
         astorb.camera.azimuth += deltaTime * astorb.cinematicMode.angularVelocity;
         var baseDistance = 12.0;
         var zoomWave = Math.sin(timestamp * 0.0004) * astorb.cinematicMode.zoomAmplitude;
@@ -2422,11 +2152,9 @@ astorb.animate = function (timestamp)
 
     // Update status display
     astorb.frameCount++;
-    if (astorb.frameCount % 10 === 0)
-    {
+    if (astorb.frameCount % 10 === 0) {
         var statusDiv = document.getElementById("statusDisplay");
-        if (statusDiv)
-        {
+        if (statusDiv) {
             var simJd = astorb.simJd();
             statusDiv.textContent = astorb.utils.buildStatusText
                 ? astorb.utils.buildStatusText({
@@ -2448,32 +2176,27 @@ astorb.animate = function (timestamp)
 
     // Render
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    if (astorb.planetOrbitBuffer)
-    {
+    if (astorb.planetOrbitBuffer) {
         gl.useProgram(astorb.asteroidProgram);
         gl.bindBuffer(gl.ARRAY_BUFFER, astorb.planetOrbitBuffer);
         astorb.configureAttributePointers(gl);
         gl.uniform1f(astorb.timeUniform, 0);
-        if (astorb.opacityUniform !== null)
-        {
+        if (astorb.opacityUniform !== null) {
             gl.uniform1f(astorb.opacityUniform, 1.0);
         }
 
-        for (var orbitIndex = 0; orbitIndex < astorb.planetOrbitOffsets.length; orbitIndex++)
-        {
+        for (var orbitIndex = 0; orbitIndex < astorb.planetOrbitOffsets.length; orbitIndex++) {
             var orbit = astorb.planetOrbitOffsets[orbitIndex];
             gl.drawArrays(gl.LINE_STRIP, orbit.start, orbit.count);
         }
     }
 
-    if (astorb.dwarfPlanetOrbitBuffer)
-    {
+    if (astorb.dwarfPlanetOrbitBuffer) {
         gl.useProgram(astorb.asteroidProgram);
         gl.bindBuffer(gl.ARRAY_BUFFER, astorb.dwarfPlanetOrbitBuffer);
         astorb.configureAttributePointers(gl);
         gl.uniform1f(astorb.timeUniform, 0);
-        if (astorb.opacityUniform !== null)
-        {
+        if (astorb.opacityUniform !== null) {
             gl.uniform1f(astorb.opacityUniform, 0.9);
         }
 
@@ -2481,23 +2204,20 @@ astorb.animate = function (timestamp)
             var dwarfOrbitIndex = 0;
             dwarfOrbitIndex < astorb.dwarfPlanetOrbitOffsets.length;
             dwarfOrbitIndex++
-        )
-        {
+        ) {
             var dwarfOrbit = astorb.dwarfPlanetOrbitOffsets[dwarfOrbitIndex];
             gl.drawArrays(gl.LINE_STRIP, dwarfOrbit.start, dwarfOrbit.count);
         }
     }
 
-    if (astorb.bodyBuffer && astorb.bodyProgram)
-    {
+    if (astorb.bodyBuffer && astorb.bodyProgram) {
         gl.useProgram(astorb.bodyProgram);
         gl.bindBuffer(gl.ARRAY_BUFFER, astorb.bodyBuffer);
 
         var bodyAttributes = astorb.bodyAttributes;
         var stride = 7 * 4;
         // A location of -1 means the attribute was optimized away; never enable it.
-        var bindBodyAttribute = function (location, size, offset)
-        {
+        var bindBodyAttribute = function (location, size, offset) {
             if (location < 0) return;
             gl.enableVertexAttribArray(location);
             gl.vertexAttribPointer(location, size, gl.FLOAT, false, stride, offset);
@@ -2506,8 +2226,7 @@ astorb.animate = function (timestamp)
         bindBodyAttribute(bodyAttributes.radius, 1, 12);
         bindBodyAttribute(bodyAttributes.color, 3, 16);
         gl.uniform1f(astorb.bodyUniforms.pointScale, astorb.bodyScale);
-        if (astorb.bodyUniforms.opacity !== null)
-        {
+        if (astorb.bodyUniforms.opacity !== null) {
             gl.uniform1f(astorb.bodyUniforms.opacity, 1.0);
         }
 
@@ -2521,60 +2240,50 @@ astorb.animate = function (timestamp)
     gl.depthMask(false);
     var blurSamples = motionBlur.enabled ? motionBlur.sampleCount : 1;
     var blurSpan = 0;
-    if (motionBlur.enabled && blurSamples > 1)
-    {
+    if (motionBlur.enabled && blurSamples > 1) {
         blurSpan = Math.min(
             motionBlur.maxSpanSeconds,
             Math.abs(simDelta) * motionBlur.spanMultiplier
         );
     }
-    if (blurSpan === 0)
-    {
+    if (blurSpan === 0) {
         blurSamples = 1;
     }
     var blurActive = motionBlur.enabled && blurSamples > 1;
-    for (var sampleIndex = 0; sampleIndex < blurSamples; sampleIndex++)
-    {
+    for (var sampleIndex = 0; sampleIndex < blurSamples; sampleIndex++) {
         var sampleBlend = blurSamples > 1 ? sampleIndex / (blurSamples - 1) : 0;
         var sampleTime = time.simTime - blurSpan * sampleBlend;
         var weight = blurActive ? 1.0 - sampleBlend : 1.0;
         var opacity = blurActive ? motionBlur.opacity * weight : 1.0;
 
         gl.uniform1f(astorb.timeUniform, sampleTime);
-        if (astorb.opacityUniform !== null)
-        {
+        if (astorb.opacityUniform !== null) {
             gl.uniform1f(astorb.opacityUniform, opacity);
         }
         gl.drawArrays(gl.POINTS, 0, asteroidDrawCount);
     }
-    if (astorb.depthBufferEnabled)
-    {
+    if (astorb.depthBufferEnabled) {
         gl.depthMask(true);
     }
 
     // ?debug=1: count GL errors (getError stalls the pipeline, so only when asked).
-    if (astorb.options.debug)
-    {
+    if (astorb.options.debug) {
         var glError = gl.getError();
-        if (glError !== gl.NO_ERROR)
-        {
+        if (glError !== gl.NO_ERROR) {
             window.__astorbGlErrors = (window.__astorbGlErrors || 0) + 1;
-            if (window.__astorbGlErrors <= 5)
-            {
+            if (window.__astorbGlErrors <= 5) {
                 astorb.log("WebGL error 0x" + glError.toString(16), "red");
             }
         }
     }
 
-    if (!astorb.firstFrameRendered && astorb.dataLoaded)
-    {
+    if (!astorb.firstFrameRendered && astorb.dataLoaded) {
         astorb.firstFrameRendered = true;
         window.__astorbFirstFrameRendered = true;
         document.dispatchEvent(new CustomEvent("astorb:first-frame"));
     }
 
-    if (stats)
-    {
+    if (stats) {
         stats.end();
     }
 
@@ -2582,3 +2291,12 @@ astorb.animate = function (timestamp)
 
     requestAnimationFrame(astorb.animate);
 };
+
+if (typeof window !== "undefined") {
+    window.astorb = astorb;
+    window.astorbUtils = astorbUtils;
+    window.astorbAstro = astorbAstro;
+}
+
+export { astorb };
+export default astorb;
