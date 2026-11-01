@@ -6,9 +6,8 @@ artifacts/
 
 dist/
 
-# Raw source catalogs (hundreds of MB; archived as release assets instead)
-temp/*.dat
-temp/*.dat.gz
+# Local scratch, temporary test files, and raw source catalogs
+temp/
 
 # The 2013 catalog is no longer used (kept in history only).
 astorb/astorb.dat.gz
