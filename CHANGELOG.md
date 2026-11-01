@@ -28,5 +28,22 @@ Correct astronomy on the existing app, with a fresh catalog.
 
 ### Development
 
-- Shared, tested astronomy module (`scripts/js/astorb-astro.js`); converter with metadata, rejection report and byte-identical rebuilds; manual `npm run data:refresh`; JPL Horizons fixtures; a deterministic 20k-record fixture dataset; Playwright browser tests; CI on Node 24 with smoke screenshots.
+- Shared, tested astronomy module (`scripts/js/astorb-astro.js`); converter with metadata, rejection report and byte-identical rebuilds; manual `pnpm run data:refresh`; JPL Horizons fixtures; a deterministic 20k-record fixture dataset; Playwright browser tests; CI on Node 24 with smoke screenshots.
 - Removed unused `sylvester` and `glUtils`, and the old 2013 catalog from the working tree.
+
+### Toolchain & Architecture (Vite+ Migration)
+
+- **Vite+ Unified Toolchain**:
+    - Replaced disparate dev tools with Vite+ (`vp` CLI, Vite 8 / Rolldown / Vitest / Oxlint / Oxfmt).
+    - Switched package manager to `pnpm@12.16.1` with `pnpm-lock.yaml`.
+    - Replaced ESLint with Oxlint (`vp lint` / `vp check`), achieving sub-200ms zero-warning lint passes.
+    - Replaced Prettier with Oxfmt (`vp fmt`), adopting standard 1TBS brace style and LF line endings across the repository.
+    - Migrated unit and E2E tests to Vitest (`vite-plus/test`), executing 42 unit tests in ~250ms.
+- **ES Module Conversion & Production `dist/` Build**:
+    - Converted frontend application files (`astorb3d.js`, `astorb-utils.js`, `astorb-astro.js`) to ES modules with standard imports and exports.
+    - Replaced vendored libraries (`scripts/js/libs/`) with npm dependencies `gl-matrix` and `stats.js`.
+    - Maintained `window.astorb`, `window.astorbUtils`, `window.astorbAstro` globals for debugging and automated testing.
+    - Fixed production build (`vp build`): Rolldown bundles and minifies assets to `dist/assets/main-*.js` (48.55 kB) and copies the release dataset (`dist/data/release/astorb3d.bin`).
+    - Added committed release dataset pipeline in `data/release/` validated by `tools/data-release.mjs` and `tests/astorb-release.test.mjs`.
+    - Added GitHub Pages deployment workflow (`.github/workflows/deploy-pages.yml`) with `.nojekyll` and relative path support.
+    - Updated CI workflows (`ci.yml`, `full-catalog.yml`) with pnpm, `vp check`, unit tests, Playwright browser tests, and a blocking `build` job with `dist/` audit.
