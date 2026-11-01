@@ -51,19 +51,23 @@ This document acts as an entry point and context provider for future AI agent se
 
 ## Development Scripts & Utilities
 
-| Command                  | Action                                                                     |
-| ------------------------ | -------------------------------------------------------------------------- |
-| `pnpm run dev`           | Development server with hot reload via Vite+ (`vp dev`).                   |
-| `pnpm run build`         | Production build to `dist/` bundling JS and release dataset (`vp build`).  |
-| `pnpm run preview`       | Preview production `dist/` build locally (`vp preview`).                   |
-| `pnpm test`              | Unit, data and accuracy tests with Vitest (`vp test --project=unit --run`) |
-| `pnpm run test:e2e`      | Browser tests with Playwright and Vitest (`vp test --project=e2e --run`).  |
-| `pnpm run check`         | Unified check running linter and format checker (`vp check`).              |
-| `pnpm run lint`          | oxlint via Vite+ (`vp lint`).                                              |
-| `pnpm run format`        | Oxfmt (`vp fmt --write`, default 1TBS style).                              |
-| `pnpm run format:check`  | Verify formatting without writing (`vp fmt --check`).                      |
-| `pnpm run screenshot`    | Deterministic screenshot (`--query`, `--mobile`, `--output`).              |
-| `pnpm run data:release`  | Package validated release dataset into `data/release/`.                    |
-| `pnpm run data:refresh`  | Manual refresh: fetch, build, Horizons fixtures, validate, summary.        |
-| `pnpm run data:fixture`  | Rebuild the CI fixture dataset.                                            |
-| `pnpm run data:horizons` | Regenerate Horizons fixtures (`-- --epoch YYYY-MM-DD`).                    |
+| Command                   | Action                                                                     |
+| ------------------------- | -------------------------------------------------------------------------- |
+| `pnpm run dev`            | Development server with hot reload via Vite+ (`vp dev`).                   |
+| `pnpm run build`          | Production build to `dist/` bundling JS and release dataset (`vp build`).  |
+| `pnpm run preview`        | Preview production `dist/` build locally (`vp preview`).                   |
+| `pnpm test`               | Unit, data and accuracy tests with Vitest (`vp test --project=unit --run`) |
+| `pnpm run test:e2e`       | Browser tests with Playwright and Vitest (`vp test --project=e2e --run`).  |
+| `pnpm run check`          | Unified check running linter and format checker (`vp check`).              |
+| `pnpm run lint`           | oxlint via Vite+ (`vp lint`).                                              |
+| `pnpm run format`         | Oxfmt (`vp fmt --write`, default 1TBS style).                              |
+| `pnpm run format:check`   | Verify formatting without writing (`vp fmt --check`).                      |
+| `pnpm run screenshot`     | Deterministic screenshot (`--query`, `--mobile`, `--output`).              |
+| `pnpm run data:release`   | Package validated release dataset into `data/release/`.                    |
+| `pnpm run data:refresh`   | Manual refresh: fetch, build, Horizons fixtures, validate, summary.        |
+| `pnpm run data:fixture`   | Rebuild the CI fixture dataset.                                            |
+| `pnpm run data:horizons`  | Regenerate Horizons fixtures (`-- --epoch YYYY-MM-DD`).                    |
+| `pnpm run deps:install`   | Install dependencies cleanly via pnpm (`pnpm install`).                    |
+| `pnpm run deps:update`    | Update dependencies to latest compatible versions (`pnpm update`).         |
+| `pnpm run deps:audit`     | Check installed dependencies for security advisories (`pnpm audit`).       |
+| `pnpm run deps:audit:fix` | Fix security advisories automatically (`pnpm audit --fix`).                |
