@@ -25,30 +25,40 @@ astorb3d aims to be a faithful visualization, not an ephemeris or an impact-pred
 - **Planets** use JPL's approximate Keplerian elements and rates (E. M. Standish, Table 1), fitted for 1800–2050. Within that range they are within about 0.1° of JPL Horizons; outside it the status bar says positions are approximate. The reachable range is ±1,000 years from the epoch.
 - **Moon orbits** are illustrative: not in their real planes or phases.
 
-Tests check the planets and a set of asteroids against JPL Horizons vectors (`npm test`).
+Tests check the planets and a set of asteroids against JPL Horizons vectors (`pnpm test`).
 
 ## Data pipeline
 
-The app loads `temp/astorb3d.meta.json` (epoch, record count, snapshot checksum) and then `temp/astorb3d.bin`: Float32, little-endian, six values per asteroid (mean anomaly, argument of perihelion, longitude of ascending node, inclination, eccentricity, semi-major axis).
+The app loads `data/release/astorb3d.meta.json` (epoch, record count, snapshot checksum) and then `data/release/astorb3d.bin`: Float32, little-endian, six values per asteroid (mean anomaly, argument of perihelion, longitude of ascending node, inclination, eccentricity, semi-major axis).
 
 Both are built from a raw Lowell snapshot recorded in `data/manifest.source.json`:
 
 ```bash
-npm run data:build     # rebuild from the archived snapshot (byte-identical)
-npm run data:refresh   # download the latest catalog, rebuild, validate and test
+pnpm run data:build     # rebuild from the archived snapshot (byte-identical)
+pnpm run data:refresh   # download latest catalog, rebuild, validate, and test
+pnpm run data:release   # stage & validate the committed release dataset in data/release/
 ```
+
+Manual dataset updates are performed by running:
+
+1. `pnpm run data:refresh` to fetch the snapshot, rebuild binaries, and verify Horizons accuracy.
+2. `pnpm run data:release` to copy and validate the release dataset into `data/release/`.
+3. Commit `data/release/astorb3d.bin` and `data/release/astorb3d.meta.json`.
 
 See [project_context.md](project_context.md) for the full command list and code map.
 
 ## Development
 
+Toolchain is powered by **Vite+** (`vp` CLI) and **pnpm**:
+
 ```bash
-npm ci
-npm run dev            # Vite dev server
-npm test               # unit, data and accuracy tests
-npm run test:e2e       # browser tests (Playwright)
-npm run lint
-npm run format
+pnpm install
+pnpm run dev            # vp dev
+pnpm test               # vp test --project=unit --run
+pnpm run test:e2e       # vp test --project=e2e --run
+pnpm run lint           # vp lint (oxlint)
+pnpm run format         # vp fmt --write (oxfmt)
+pnpm run build          # vp build (bundles ES modules & stages dataset into dist/)
 ```
 
 ## Data credits
