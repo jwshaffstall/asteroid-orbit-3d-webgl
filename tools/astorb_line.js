@@ -27,32 +27,26 @@ var FIELDS = {
 
 var MINIMUM_LINE_LENGTH = FIELDS.semimajorAxis[1];
 
-var field = function (line, name)
-{
+var field = function (line, name) {
     var range = FIELDS[name];
     return line.slice(range[0], range[1]).trim();
 };
 
 // Strict decimal parse: rejects blanks and trailing junk that parseFloat would accept.
-var parseNumber = function (text)
-{
-    if (!/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(text))
-    {
+var parseNumber = function (text) {
+    if (!/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(text)) {
         return NaN;
     }
     return Number(text);
 };
 
 // Returns { record } for a valid elliptic orbit, or { error, line } explaining the rejection.
-function parseLine(rawLine)
-{
+function parseLine(rawLine) {
     var line = String(rawLine).replace(/\r$/, "");
-    if (line.trim() === "")
-    {
+    if (line.trim() === "") {
         return { error: "blank line", line: line };
     }
-    if (line.length < MINIMUM_LINE_LENGTH)
-    {
+    if (line.length < MINIMUM_LINE_LENGTH) {
         return { error: "line too short (" + line.length + " chars)", line: line };
     }
 
@@ -70,12 +64,10 @@ function parseLine(rawLine)
         semimajorAxis: parseNumber(field(line, "semimajorAxis")),
     };
 
-    if (record.number !== null && !Number.isInteger(record.number))
-    {
+    if (record.number !== null && !Number.isInteger(record.number)) {
         return { error: "bad asteroid number", line: line };
     }
-    if (!/^\d{8}$/.test(record.epoch))
-    {
+    if (!/^\d{8}$/.test(record.epoch)) {
         return { error: "bad epoch", line: line };
     }
     var orbitalFields = [
@@ -86,23 +78,18 @@ function parseLine(rawLine)
         "eccentricity",
         "semimajorAxis",
     ];
-    for (var index = 0; index < orbitalFields.length; index++)
-    {
-        if (!Number.isFinite(record[orbitalFields[index]]))
-        {
+    for (var index = 0; index < orbitalFields.length; index++) {
+        if (!Number.isFinite(record[orbitalFields[index]])) {
             return { error: "non-numeric " + orbitalFields[index], line: line };
         }
     }
-    if (record.semimajorAxis <= 0)
-    {
+    if (record.semimajorAxis <= 0) {
         return { error: "semimajor axis <= 0", line: line };
     }
-    if (record.eccentricity < 0 || record.eccentricity >= 1)
-    {
+    if (record.eccentricity < 0 || record.eccentricity >= 1) {
         return { error: "not elliptic (e >= 1)", line: line };
     }
-    if (record.inclination < 0 || record.inclination > 180)
-    {
+    if (record.inclination < 0 || record.inclination > 180) {
         return { error: "inclination out of range", line: line };
     }
 
@@ -112,7 +99,6 @@ function parseLine(rawLine)
 exports.FIELDS = FIELDS;
 exports.parseLine = parseLine;
 // Backwards-compatible shape used by older callers: the record, or null.
-exports.parse = function (line)
-{
+exports.parse = function (line) {
     return parseLine(line).record || null;
 };

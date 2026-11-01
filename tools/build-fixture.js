@@ -19,21 +19,17 @@ var converter = require("./astorb2bin.js");
 var TARGET_RECORDS = 20000;
 var PER_CLASS_CAP = 1500;
 
-async function readLines(inputPath)
-{
+async function readLines(inputPath) {
     var stream = fileSystem.createReadStream(inputPath);
-    if (/\.gz$/i.test(inputPath))
-    {
+    if (/\.gz$/i.test(inputPath)) {
         stream = stream.pipe(zlib.createGunzip());
     }
     var lines = [];
     var classes = [];
     var reader = readline.createInterface({ input: stream, crlfDelay: Infinity });
-    for await (var line of reader)
-    {
+    for await (var line of reader) {
         var result = astorbLine.parseLine(line);
-        if (!result.record)
-        {
+        if (!result.record) {
             continue;
         }
         lines.push(line);
@@ -42,11 +38,9 @@ async function readLines(inputPath)
     return { lines: lines, classes: classes };
 }
 
-async function main()
-{
+async function main() {
     var args = minimist(process.argv.slice(2), { alias: { i: "input", o: "output" } });
-    if (!args.input || !args.output)
-    {
+    if (!args.input || !args.output) {
         console.error(
             "Usage: node tools/build-fixture.js -i astorb.dat -o tests/fixtures/astorb-fixture.bin"
         );
@@ -54,8 +48,7 @@ async function main()
     }
     var data = await readLines(args.input);
     var byClass = {};
-    data.classes.forEach(function (code, index)
-    {
+    data.classes.forEach(function (code, index) {
         (byClass[code] = byClass[code] || []).push(index);
     });
 
@@ -65,39 +58,32 @@ async function main()
     var quota = {};
     var used = 0;
     var capped = [];
-    codes.forEach(function (code)
-    {
+    codes.forEach(function (code) {
         var size = byClass[code].length;
         quota[code] = Math.min(size, PER_CLASS_CAP);
         used += quota[code];
-        if (size > PER_CLASS_CAP)
-        {
+        if (size > PER_CLASS_CAP) {
             capped.push(code);
         }
     });
-    var cappedTotal = capped.reduce(function (sum, code)
-    {
+    var cappedTotal = capped.reduce(function (sum, code) {
         return sum + byClass[code].length;
     }, 0);
     var remaining = Math.max(0, TARGET_RECORDS - used);
-    capped.forEach(function (code)
-    {
+    capped.forEach(function (code) {
         var extra = Math.floor((remaining * byClass[code].length) / cappedTotal);
         quota[code] = Math.min(byClass[code].length, quota[code] + extra);
     });
 
     var selected = [];
-    codes.forEach(function (code)
-    {
+    codes.forEach(function (code) {
         var members = byClass[code];
         var take = quota[code];
-        for (var k = 0; k < take; k++)
-        {
+        for (var k = 0; k < take; k++) {
             selected.push(members[Math.floor((k * members.length) / take)]);
         }
     });
-    selected.sort(function (x, y)
-    {
+    selected.sort(function (x, y) {
         return x - y;
     });
 
@@ -105,23 +91,19 @@ async function main()
     fileSystem.writeFileSync(
         temporary,
         selected
-            .map(function (index)
-            {
+            .map(function (index) {
                 return data.lines[index];
             })
             .join("\n") + "\n"
     );
-    try
-    {
+    try {
         await converter.convert({
             input: temporary,
             output: args.output,
             snapshotDate: args["snapshot-date"] || null,
             dwarfs: path.join(__dirname, "..", "data", "dwarf-planets.json"),
         });
-    }
-    finally
-    {
+    } finally {
         fileSystem.unlinkSync(temporary);
     }
     // The fixture is derived data; record what it was sampled from.
@@ -138,8 +120,7 @@ async function main()
     fileSystem.rmSync(args.output.replace(/\.bin$/i, "") + ".rejected.json", { force: true });
 }
 
-main().catch(function (error)
-{
+main().catch(function (error) {
     console.error(error);
     process.exit(1);
 });

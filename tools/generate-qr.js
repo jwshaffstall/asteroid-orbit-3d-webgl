@@ -7,10 +7,8 @@ const outputPath = path.join(__dirname, "..", "assets", "astorb3d-qr.png");
 
 fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 
-QRCode.toFile(outputPath, targetUrl, { width: 300, margin: 1 }, (err) =>
-{
-    if (err)
-    {
+QRCode.toFile(outputPath, targetUrl, { width: 300, margin: 1 }, (err) => {
+    if (err) {
         console.error("Failed to generate QR code:", err);
         process.exit(1);
     }

@@ -25,8 +25,7 @@ var MAX_SAMPLES_PER_REASON = 10;
 // than propagated: two-body propagation over decades would not be faithful.
 var MAX_PROPAGATION_DAYS = 3650;
 
-function printUsage(exitCode)
-{
+function printUsage(exitCode) {
     console.log("Usage: node tools/astorb2bin.js -i path/to/astorb.dat[.gz] -o path/to/output.bin");
     console.log("");
     console.log("Options:");
@@ -45,59 +44,48 @@ function printUsage(exitCode)
 }
 
 // Growable Float32Array / Float64Array without holding millions of JS objects.
-function createGrowable(TypedArray, initialLength)
-{
+function createGrowable(TypedArray, initialLength) {
     var array = new TypedArray(initialLength);
     var length = 0;
     return {
-        push: function (value)
-        {
-            if (length === array.length)
-            {
+        push: function (value) {
+            if (length === array.length) {
                 var grown = new TypedArray(array.length * 2);
                 grown.set(array);
                 array = grown;
             }
             array[length++] = value;
         },
-        get length()
-        {
+        get length() {
             return length;
         },
-        view: function ()
-        {
+        view: function () {
             return array.subarray(0, length);
         },
     };
 }
 
-function sha256File(filePath)
-{
-    return new Promise(function (resolve, reject)
-    {
+function sha256File(filePath) {
+    return new Promise(function (resolve, reject) {
         var hash = nodeCrypto.createHash("sha256");
         fileSystem
             .createReadStream(filePath)
-            .on("data", function (chunk)
-            {
+            .on("data", function (chunk) {
                 hash.update(chunk);
             })
             .on("error", reject)
-            .on("end", function ()
-            {
+            .on("end", function () {
                 resolve(hash.digest("hex"));
             });
     });
 }
 
-function snapshotDateFromName(filePath)
-{
+function snapshotDateFromName(filePath) {
     var match = /(\d{4}-\d{2}-\d{2})/.exec(path.basename(filePath));
     return match ? match[1] : null;
 }
 
-function bodyElements(record, epochJd)
-{
+function bodyElements(record, epochJd) {
     return {
         name: record.designation,
         number: record.number,
@@ -112,13 +100,11 @@ function bodyElements(record, epochJd)
     };
 }
 
-async function convert(options)
-{
+async function convert(options) {
     var inputPath = options.input;
     var outputPath = options.output;
     var stats = fileSystem.statSync(inputPath);
-    if (!stats.isFile())
-    {
+    if (!stats.isFile()) {
         throw new Error("input path is not a file: " + inputPath);
     }
     console.log("input: %s (%s MB)", inputPath, (stats.size / 1048576).toFixed(1));
@@ -126,8 +112,7 @@ async function convert(options)
     console.log("sha256: %s", sourceSha256);
 
     var stream = fileSystem.createReadStream(inputPath);
-    if (/\.gz$/i.test(inputPath))
-    {
+    if (/\.gz$/i.test(inputPath)) {
         stream = stream.pipe(zlib.createGunzip());
     }
     var lines = readline.createInterface({ input: stream, crlfDelay: Infinity });
@@ -142,30 +127,25 @@ async function convert(options)
     var catalogBodies = {};
     var lineCount = 0;
 
-    var reject = function (reason, line)
-    {
+    var reject = function (reason, line) {
         var entry = rejected[reason] || (rejected[reason] = { count: 0, samples: [] });
         entry.count++;
-        if (entry.samples.length < MAX_SAMPLES_PER_REASON)
-        {
+        if (entry.samples.length < MAX_SAMPLES_PER_REASON) {
             entry.samples.push(line);
         }
     };
 
-    for await (var line of lines)
-    {
+    for await (var line of lines) {
         lineCount++;
         var result = astorbLine.parseLine(line);
-        if (!result.record)
-        {
+        if (!result.record) {
             reject(result.error, result.line);
             continue;
         }
         var record = result.record;
         var epochJd = astro.jdFromYyyymmdd(record.epoch);
         epochCounts[record.epoch] = (epochCounts[record.epoch] || 0) + 1;
-        if (record.number === 1 || record.number === 2 || record.number === 4)
-        {
+        if (record.number === 1 || record.number === 2 || record.number === 4) {
             catalogBodies[record.number] = record;
         }
         floats.push(record.meanAnomaly);
@@ -181,17 +161,14 @@ async function convert(options)
 
     // The dataset epoch is the epoch shared by the most records (Lowell: all of them).
     var epochKeys = Object.keys(epochCounts);
-    if (epochKeys.length === 0)
-    {
+    if (epochKeys.length === 0) {
         throw new Error("no valid records in " + inputPath);
     }
-    var datasetEpoch = epochKeys.reduce(function (best, key)
-    {
+    var datasetEpoch = epochKeys.reduce(function (best, key) {
         return epochCounts[key] > epochCounts[best] ? key : best;
     });
     var datasetEpochJd = astro.jdFromYyyymmdd(datasetEpoch);
-    if (epochKeys.length > 1)
-    {
+    if (epochKeys.length > 1) {
         console.warn(
             "warning: %d distinct epochs; dataset epoch %s",
             epochKeys.length,
@@ -205,15 +182,12 @@ async function convert(options)
     var propagated = 0;
     var maxPropagationDays = 0;
     var keep = new Uint8Array(allEpochs.length).fill(1);
-    for (var index = 0; index < allEpochs.length; index++)
-    {
+    for (var index = 0; index < allEpochs.length; index++) {
         var deltaDays = datasetEpochJd - allEpochs[index];
-        if (deltaDays === 0)
-        {
+        if (deltaDays === 0) {
             continue;
         }
-        if (Math.abs(deltaDays) > MAX_PROPAGATION_DAYS)
-        {
+        if (Math.abs(deltaDays) > MAX_PROPAGATION_DAYS) {
             keep[index] = 0;
             reject(
                 "epoch more than " + MAX_PROPAGATION_DAYS + " days from dataset epoch",
@@ -233,30 +207,24 @@ async function convert(options)
     }
 
     var keptCount = 0;
-    for (var k = 0; k < keep.length; k++)
-    {
+    for (var k = 0; k < keep.length; k++) {
         keptCount += keep[k];
     }
     var output = new Float32Array(keptCount * FLOATS_PER_RECORD);
     var classCounts = {};
-    classify.CLASS_NAMES.forEach(function (name)
-    {
+    classify.CLASS_NAMES.forEach(function (name) {
         classCounts[name] = 0;
     });
     var cursor = 0;
-    for (var r = 0; r < keep.length; r++)
-    {
-        if (!keep[r])
-        {
+    for (var r = 0; r < keep.length; r++) {
+        if (!keep[r]) {
             continue;
         }
         var base = r * FLOATS_PER_RECORD;
         var values = allFloats.subarray(base, base + FLOATS_PER_RECORD);
         // Every value must survive the float32 conversion as a finite number.
-        for (var f = 0; f < FLOATS_PER_RECORD; f++)
-        {
-            if (!Number.isFinite(values[f]))
-            {
+        for (var f = 0; f < FLOATS_PER_RECORD; f++) {
+            if (!Number.isFinite(values[f])) {
                 throw new Error("non-finite value in record " + r);
             }
         }
@@ -277,8 +245,7 @@ async function convert(options)
     }
 
     var bytes = Buffer.from(output.buffer, output.byteOffset, output.byteLength);
-    if (bytes.length % BYTES_PER_RECORD !== 0 || bytes.length / BYTES_PER_RECORD !== keptCount)
-    {
+    if (bytes.length % BYTES_PER_RECORD !== 0 || bytes.length / BYTES_PER_RECORD !== keptCount) {
         throw new Error("output byte length is not a whole number of records");
     }
 
@@ -287,19 +254,15 @@ async function convert(options)
     var rejectedPath = outputBase + ".rejected.json";
 
     var bodies = {};
-    [1, 2, 4].forEach(function (number)
-    {
-        if (catalogBodies[number])
-        {
+    [1, 2, 4].forEach(function (number) {
+        if (catalogBodies[number]) {
             var body = bodyElements(catalogBodies[number], datasetEpochJd);
             bodies[body.name] = body;
         }
     });
-    if (options.dwarfs && fileSystem.existsSync(options.dwarfs))
-    {
+    if (options.dwarfs && fileSystem.existsSync(options.dwarfs)) {
         var dwarfs = JSON.parse(fileSystem.readFileSync(options.dwarfs, "utf8"));
-        if (Math.abs(dwarfs.epochJd - datasetEpochJd) > 1e-6)
-        {
+        if (Math.abs(dwarfs.epochJd - datasetEpochJd) > 1e-6) {
             console.warn(
                 "warning: %s is for JD %s, not the dataset epoch %s; regenerate it with " +
                     "tools/horizons-fixtures.mjs --epoch %s",
@@ -308,18 +271,14 @@ async function convert(options)
                 datasetEpochJd,
                 datasetEpoch
             );
-        }
-        else
-        {
-            dwarfs.bodies.forEach(function (body)
-            {
+        } else {
+            dwarfs.bodies.forEach(function (body) {
                 bodies[body.name] = body;
             });
         }
     }
 
-    var rejectedTotal = Object.keys(rejected).reduce(function (sum, key)
-    {
+    var rejectedTotal = Object.keys(rejected).reduce(function (sum, key) {
         return sum + rejected[key].count;
     }, 0);
 
@@ -368,17 +327,14 @@ async function convert(options)
     return meta;
 }
 
-if (require.main === module)
-{
+if (require.main === module) {
     var args = minimist(process.argv.slice(2), {
         alias: { i: "input", o: "output", h: "help" },
         string: ["input", "output", "snapshot-date", "source-url", "dwarfs"],
         boolean: ["help"],
         default: { dwarfs: path.join(__dirname, "..", "data", "dwarf-planets.json") },
-        unknown: function (arg)
-        {
-            if (arg && arg[0] === "-")
-            {
+        unknown: function (arg) {
+            if (arg && arg[0] === "-") {
                 console.error("Unknown option: %s", arg);
                 printUsage(1);
                 return false;
@@ -386,16 +342,13 @@ if (require.main === module)
             return true;
         },
     });
-    if (args.help)
-    {
+    if (args.help) {
         printUsage(0);
     }
-    if (!args.input || !args.output)
-    {
+    if (!args.input || !args.output) {
         printUsage(1);
     }
-    if (!fileSystem.existsSync(args.input))
-    {
+    if (!fileSystem.existsSync(args.input)) {
         console.error("input path does not exist: %s", args.input);
         process.exit(1);
     }
@@ -405,8 +358,7 @@ if (require.main === module)
         snapshotDate: args["snapshot-date"] || snapshotDateFromName(args.input),
         sourceUrl: args["source-url"],
         dwarfs: args.dwarfs,
-    }).catch(function (error)
-    {
+    }).catch(function (error) {
         console.error(error);
         process.exit(1);
     });

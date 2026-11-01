@@ -21,12 +21,10 @@ const outputPath = args.output || path.join("artifacts", "astorb3d.png");
 const rootDir = path.resolve(__dirname, "..");
 const RENDER_TIMEOUT_MS = 120000;
 
-const captureScreenshot = async () =>
-{
+const captureScreenshot = async () => {
     const { server, port } = await startStaticServer(rootDir);
     let browser;
-    try
-    {
+    try {
         browser = await chromium.launch({
             headless: true,
             args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
@@ -43,8 +41,7 @@ const captureScreenshot = async () =>
         );
         const page = await context.newPage();
         const consoleErrors = [];
-        page.on("console", (message) =>
-        {
+        page.on("console", (message) => {
             if (message.type() === "error") consoleErrors.push(message.text());
         });
         page.on("pageerror", (error) => consoleErrors.push(error.message));
@@ -64,24 +61,19 @@ const captureScreenshot = async () =>
         fs.mkdirSync(path.dirname(outputPath), { recursive: true });
         await page.screenshot({ path: outputPath, fullPage: true });
         console.log(`Saved screenshot to ${outputPath}`);
-        if (consoleErrors.length)
-        {
+        if (consoleErrors.length) {
             console.error("Console errors:\n" + consoleErrors.join("\n"));
             process.exitCode = 1;
         }
-    }
-    finally
-    {
-        if (browser)
-        {
+    } finally {
+        if (browser) {
             await browser.close();
         }
         server.close();
     }
 };
 
-captureScreenshot().catch((error) =>
-{
+captureScreenshot().catch((error) => {
     console.error(error);
     process.exitCode = 1;
 });

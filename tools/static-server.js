@@ -18,42 +18,32 @@ const contentTypes = {
 };
 
 // Resolve a URL path inside rootDir, or return null if it escapes it.
-const resolveInside = (rootDir, urlPath) =>
-{
+const resolveInside = (rootDir, urlPath) => {
     let decoded;
-    try
-    {
+    try {
         decoded = decodeURIComponent(urlPath.split("?")[0]);
-    }
-    catch
-    {
+    } catch {
         return null;
     }
     const requested = decoded === "/" ? "/astorb3d.html" : decoded;
     const filePath = path.resolve(rootDir, "." + requested);
     const relative = path.relative(rootDir, filePath);
-    if (relative.startsWith("..") || path.isAbsolute(relative))
-    {
+    if (relative.startsWith("..") || path.isAbsolute(relative)) {
         return null;
     }
     return filePath;
 };
 
-const startStaticServer = (rootDir) =>
-{
-    const server = http.createServer((req, res) =>
-    {
+const startStaticServer = (rootDir) => {
+    const server = http.createServer((req, res) => {
         const filePath = resolveInside(rootDir, req.url || "/");
-        if (!filePath)
-        {
+        if (!filePath) {
             res.writeHead(403);
             res.end("Forbidden");
             return;
         }
-        fs.stat(filePath, (err, stat) =>
-        {
-            if (err || !stat.isFile())
-            {
+        fs.stat(filePath, (err, stat) => {
+            if (err || !stat.isFile()) {
                 res.writeHead(404);
                 res.end("Not found");
                 return;
@@ -66,10 +56,8 @@ const startStaticServer = (rootDir) =>
             fs.createReadStream(filePath).pipe(res);
         });
     });
-    return new Promise((resolve) =>
-    {
-        server.listen(0, "127.0.0.1", () =>
-        {
+    return new Promise((resolve) => {
+        server.listen(0, "127.0.0.1", () => {
             resolve({ server, port: server.address().port });
         });
     });

@@ -25,28 +25,24 @@ export const readSourceManifest = () =>
         ? JSON.parse(fs.readFileSync(manifestPath, "utf8"))
         : { description: "", snapshots: [] };
 
-export const writeSourceManifest = (manifest) =>
-{
+export const writeSourceManifest = (manifest) => {
     fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
     fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 4) + "\n");
 };
 
-export const sha256File = async (filePath) =>
-{
+export const sha256File = async (filePath) => {
     const hash = crypto.createHash("sha256");
     await pipeline(fs.createReadStream(filePath), hash);
     return hash.digest("hex");
 };
 
-export const fetchCatalog = async ({ outDir = path.join(root, "temp") } = {}) =>
-{
+export const fetchCatalog = async ({ outDir = path.join(root, "temp") } = {}) => {
     const date = new Date().toISOString().slice(0, 10);
     const outPath = path.join(outDir, `${date}-astorb.dat.gz`);
     fs.mkdirSync(outDir, { recursive: true });
     console.log(`downloading ${LOWELL_URL}`);
     const response = await fetch(LOWELL_URL);
-    if (!response.ok || !response.body)
-    {
+    if (!response.ok || !response.body) {
         throw new Error(`Lowell download failed: HTTP ${response.status}. Try again later.`);
     }
     const partial = outPath + ".partial";
@@ -59,8 +55,7 @@ export const fetchCatalog = async ({ outDir = path.join(root, "temp") } = {}) =>
 };
 
 // Record (or update) a snapshot entry, keyed by its date.
-export const recordSnapshot = (entry) =>
-{
+export const recordSnapshot = (entry) => {
     const manifest = readSourceManifest();
     manifest.snapshots = manifest.snapshots.filter((snapshot) => snapshot.date !== entry.date);
     manifest.snapshots.push(entry);
@@ -68,12 +63,10 @@ export const recordSnapshot = (entry) =>
     writeSourceManifest(manifest);
 };
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
-{
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
     const args = minimist(process.argv.slice(2), { string: ["out"] });
     fetchCatalog({ outDir: args.out ? path.resolve(args.out) : undefined })
-        .then((snapshot) =>
-        {
+        .then((snapshot) => {
             recordSnapshot({
                 date: snapshot.date,
                 catalog: "Lowell astorb",
@@ -86,8 +79,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
             });
             console.log("recorded in data/manifest.source.json");
         })
-        .catch((error) =>
-        {
+        .catch((error) => {
             console.error(error.message);
             process.exit(1);
         });

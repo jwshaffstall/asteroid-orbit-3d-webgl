@@ -51,21 +51,16 @@ const DWARF_BODIES = [
 
 const DAY_OFFSETS = [0, -50, 50, -3652.5, 3652.5];
 
-const query = async (params) =>
-{
+const query = async (params) => {
     const search = new URLSearchParams({ format: "json", OBJ_DATA: "NO", MAKE_EPHEM: "YES" });
-    for (const [key, value] of Object.entries(params))
-    {
+    for (const [key, value] of Object.entries(params)) {
         search.set(key, `'${value}'`);
     }
-    for (let attempt = 1; attempt <= 3; attempt++)
-    {
+    for (let attempt = 1; attempt <= 3; attempt++) {
         const response = await fetch(`${API}?${search}`);
-        if (response.ok)
-        {
+        if (response.ok) {
             const json = await response.json();
-            if (json.error)
-            {
+            if (json.error) {
                 throw new Error(`Horizons error for ${params.COMMAND}: ${json.error}`);
             }
             return json.result;
@@ -75,12 +70,10 @@ const query = async (params) =>
     throw new Error(`Horizons request failed for ${params.COMMAND}`);
 };
 
-const csvRows = (result) =>
-{
+const csvRows = (result) => {
     const start = result.indexOf("$$SOE");
     const end = result.indexOf("$$EOE");
-    if (start < 0 || end < 0)
-    {
+    if (start < 0 || end < 0) {
         throw new Error("no ephemeris block in Horizons result:\n" + result.slice(0, 2000));
     }
     return result
@@ -98,11 +91,9 @@ const common = {
     CSV_FORMAT: "YES",
 };
 
-const main = async () =>
-{
+const main = async () => {
     const args = minimist(process.argv.slice(2), { string: ["epoch"] });
-    if (!args.epoch || !/^\d{4}-\d{2}-\d{2}$/.test(args.epoch))
-    {
+    if (!args.epoch || !/^\d{4}-\d{2}-\d{2}$/.test(args.epoch)) {
         console.error("Usage: node tools/horizons-fixtures.mjs --epoch YYYY-MM-DD");
         process.exit(1);
     }
@@ -117,8 +108,7 @@ const main = async () =>
         dayOffsets: DAY_OFFSETS,
         bodies: {},
     };
-    for (const body of VECTOR_BODIES)
-    {
+    for (const body of VECTOR_BODIES) {
         const result = await query({
             ...common,
             COMMAND: body.command,
@@ -140,8 +130,7 @@ const main = async () =>
         epochJd,
         bodies: [],
     };
-    for (const body of DWARF_BODIES)
-    {
+    for (const body of DWARF_BODIES) {
         const result = await query({
             ...common,
             COMMAND: body.command,
@@ -173,8 +162,7 @@ const main = async () =>
     console.log(`wrote ${path.relative(root, vectorsPath)} and ${path.relative(root, dwarfsPath)}`);
 };
 
-main().catch((error) =>
-{
+main().catch((error) => {
     console.error(error);
     process.exit(1);
 });

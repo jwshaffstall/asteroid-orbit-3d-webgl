@@ -26,22 +26,19 @@ const DWARFS = path.join(root, "data", "dwarf-planets.json");
 
 const run = (command, args) => execFileSync(command, args, { cwd: root, stdio: "inherit" });
 
-const main = async () =>
-{
+const main = async () => {
     const args = minimist(process.argv.slice(2), { string: ["input", "snapshot-date"] });
     const previous = fs.existsSync(META) ? JSON.parse(fs.readFileSync(META, "utf8")) : null;
 
     let input = args.input ? path.resolve(args.input) : null;
     let snapshotDate = args["snapshot-date"] || null;
-    if (!input)
-    {
+    if (!input) {
         const snapshot = await fetchCatalog();
         input = snapshot.file;
         snapshotDate = snapshot.date;
     }
     snapshotDate = snapshotDate || (/(\d{4}-\d{2}-\d{2})/.exec(path.basename(input)) || [])[1];
-    if (!snapshotDate)
-    {
+    if (!snapshotDate) {
         throw new Error("pass --snapshot-date YYYY-MM-DD (it isn't in the file name)");
     }
 
@@ -54,18 +51,15 @@ const main = async () =>
     const problems = [];
     const snapshotJd = astro.jdFromYyyymmdd(snapshotDate.replaceAll("-", ""));
     // Lowell's epoch is the JD ending in 00.5 nearest the file date (100-day steps).
-    if (Math.abs(meta.epochJd - snapshotJd) > 50)
-    {
+    if (Math.abs(meta.epochJd - snapshotJd) > 50) {
         problems.push(`epoch ${meta.epoch} is more than 50 days from snapshot ${snapshotDate}`);
     }
-    if (previous && Math.abs(meta.recordCount / previous.recordCount - 1) > 0.05)
-    {
+    if (previous && Math.abs(meta.recordCount / previous.recordCount - 1) > 0.05) {
         problems.push(
             `record count changed by more than 5% (${previous.recordCount} -> ${meta.recordCount})`
         );
     }
-    if (meta.rejected > meta.recordCount * 0.001)
-    {
+    if (meta.rejected > meta.recordCount * 0.001) {
         problems.push(`${meta.rejected} rejected records (see temp/astorb3d.rejected.json)`);
     }
 
@@ -93,15 +87,13 @@ const main = async () =>
             (previous ? ` (was ${previous.recordCount}, epoch ${previous.epoch})` : "")
     );
     console.log(`  rejected  ${meta.rejected}`);
-    if (problems.length)
-    {
+    if (problems.length) {
         console.log("\nValidation problems:\n  - " + problems.join("\n  - "));
         process.exitCode = 1;
     }
     const gz = input.endsWith(".gz") ? input : `${input}.gz`;
     console.log("\nTo archive the snapshot (needs a .gz copy):");
-    if (!input.endsWith(".gz"))
-    {
+    if (!input.endsWith(".gz")) {
         console.log(`  gzip -9 -n -k ${path.relative(root, input)}`);
     }
     const tag = `data-lowell-${snapshotDate.replaceAll("-", "")}`;
@@ -111,8 +103,7 @@ const main = async () =>
     console.log('  then set "archived": true for this snapshot in data/manifest.source.json');
 };
 
-main().catch((error) =>
-{
+main().catch((error) => {
     console.error(error.message || error);
     process.exit(1);
 });

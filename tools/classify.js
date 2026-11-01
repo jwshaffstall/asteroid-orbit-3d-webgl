@@ -30,8 +30,7 @@ var CLASS_NAMES = [
 ];
 
 var CLASS = {};
-CLASS_NAMES.forEach(function (name, index)
-{
+CLASS_NAMES.forEach(function (name, index) {
     CLASS[name] = index;
 });
 
@@ -54,66 +53,52 @@ var CLASS_ORDER = [
 
 // Test for each class in CLASS_ORDER; o = { a, e, i, q, Q } (AU, degrees).
 var RULES = {
-    Atira: function (o)
-    {
+    Atira: function (o) {
         return o.a < 1.0 && o.Q < 0.983;
     },
-    Aten: function (o)
-    {
+    Aten: function (o) {
         return o.a < 1.0 && o.Q >= 0.983;
     },
-    Apollo: function (o)
-    {
+    Apollo: function (o) {
         return o.a >= 1.0 && o.q < 1.017;
     },
-    Amor: function (o)
-    {
+    Amor: function (o) {
         return o.a >= 1.0 && o.q >= 1.017 && o.q < 1.3;
     },
-    "Mars-crosser": function (o)
-    {
+    "Mars-crosser": function (o) {
         return o.q >= 1.3 && o.q < 1.666 && o.a < 3.2;
     },
-    Trojan: function (o)
-    {
+    Trojan: function (o) {
         return o.a > 4.6 && o.a < 5.5 && o.e < 0.3;
     },
     // Hilda group (3:2 resonance with Jupiter).
-    Hilda: function (o)
-    {
+    Hilda: function (o) {
         return o.a > 3.7 && o.a < 4.2 && o.e < 0.3 && o.i < 20;
     },
     // Hungaria group (inside the main belt's inner edge, high inclination).
-    Hungaria: function (o)
-    {
+    Hungaria: function (o) {
         return o.a > 1.78 && o.a < 2.06 && o.e < 0.18 && o.i > 16 && o.i < 34;
     },
-    "Inner main belt": function (o)
-    {
+    "Inner main belt": function (o) {
         return o.a < 2.0 && o.q >= 1.666;
     },
-    "Middle main belt": function (o)
-    {
+    "Middle main belt": function (o) {
         return o.a >= 2.0 && o.a < 3.2 && o.q >= 1.666;
     },
-    "Outer main belt": function (o)
-    {
+    "Outer main belt": function (o) {
         return o.a >= 3.2 && o.a < 4.6;
     },
-    Centaur: function (o)
-    {
+    Centaur: function (o) {
         return o.a >= 5.5 && o.a < 30.1;
     },
-    TNO: function (o)
-    {
+    TNO: function (o) {
         return o.a >= 30.1;
     },
 };
 
 // Mean longitude difference from Jupiter at the given Julian Date, in (-180, 180] degrees.
 // Positive means the object leads Jupiter (L4); negative means it trails (L5).
-var longitudeFromJupiter = function (elements, jd)
-{
+var longitudeFromJupiter = function (elements, jd) {
     var jupiter = astro.planetElementsAt("Jupiter", jd);
     var lambdaJupiter = jupiter.O + jupiter.w + jupiter.M;
     var lambda =
@@ -124,18 +109,14 @@ var longitudeFromJupiter = function (elements, jd)
 
 // elements: a parsed astorb record (see astorb_line.js); jd: the epoch as a Julian Date.
 // Returns the class code (index into CLASS_NAMES).
-function classify(elements, jd)
-{
+function classify(elements, jd) {
     var a = elements.semimajorAxis;
     var e = elements.eccentricity;
     var orbit = { a: a, e: e, i: elements.inclination, q: a * (1 - e), Q: a * (1 + e) };
-    for (var index = 0; index < CLASS_ORDER.length; index++)
-    {
+    for (var index = 0; index < CLASS_ORDER.length; index++) {
         var name = CLASS_ORDER[index];
-        if (RULES[name](orbit))
-        {
-            if (name === "Trojan")
-            {
+        if (RULES[name](orbit)) {
+            if (name === "Trojan") {
                 return longitudeFromJupiter(elements, jd) > 0
                     ? CLASS["Trojan L4"]
                     : CLASS["Trojan L5"];
