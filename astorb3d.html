@@ -364,11 +364,7 @@
             <a href="https://ssd.jpl.nasa.gov/planets/approx_pos.html">JPL approximate elements</a>.
         </footer>
         <div id="astorbLog"></div>
-        <script src="scripts/js/libs/gl-matrix-min.js"></script>
-        <script src="scripts/js/libs/stats.min.js"></script>
-        <script src="scripts/js/astorb-utils.js"></script>
-        <script src="scripts/js/astorb-astro.js"></script>
-        <script src="scripts/js/astorb3d.js"></script>
+        <script type="module" src="./scripts/js/astorb3d.js"></script>
         <!-- GPU shader programs embedded in the page for easy inspection. -->
         <script type="x-shader/x-vertex" id="shader-vs">
             // Two-body Kepler motion for every asteroid, on the GPU.
