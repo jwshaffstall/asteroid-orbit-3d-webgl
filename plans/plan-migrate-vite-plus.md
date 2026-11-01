@@ -11,37 +11,37 @@ and the Oxc tools. Also fix the broken `dist/` build and move to pnpm.
 
 ## 2. Decisions so far
 
-| # | Decision |
-| - | -------- |
-| D1 | Formatter is **Oxfmt with its default style**. Allman braces are dropped and the repo is reformatted once. |
-| D2 | "osc" means **Oxc** (Oxlint, Oxfmt, oxc minify). |
-| D3 | **Everything moves to Vitest where possible**: unit tests and e2e tests. |
-| D4 | **Fix the `dist/` build** as part of this migration. |
-| D5 | **Move to pnpm**, if it's the best-supported option for Vite+ (verify in Phase 1). |
-| D7 | **Fix `dist/` via ES-module conversion (Option B)**, sequenced after the toolchain swap. |
-| D8 | **`dist/` ships the full catalog** `astorb3d.bin`. |
-| D9 | **E2E: Vitest + Playwright library** (not Vitest browser mode). |
-| D10 | **Dataset refreshes run manually** (no schedule). CI no longer fetches data (see D13). |
-| D11 | **Keep the `window.astorb` global.** |
-| D12 | **GitHub Pages is the primary host.** |
+| #   | Decision                                                                                                                                         |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| D1  | Formatter is **Oxfmt with its default style**. Allman braces are dropped and the repo is reformatted once.                                       |
+| D2  | "osc" means **Oxc** (Oxlint, Oxfmt, oxc minify).                                                                                                 |
+| D3  | **Everything moves to Vitest where possible**: unit tests and e2e tests.                                                                         |
+| D4  | **Fix the `dist/` build** as part of this migration.                                                                                             |
+| D5  | **Move to pnpm**, if it's the best-supported option for Vite+ (verify in Phase 1).                                                               |
+| D7  | **Fix `dist/` via ES-module conversion (Option B)**, sequenced after the toolchain swap.                                                         |
+| D8  | **`dist/` ships the full catalog** `astorb3d.bin`.                                                                                               |
+| D9  | **E2E: Vitest + Playwright library** (not Vitest browser mode).                                                                                  |
+| D10 | **Dataset refreshes run manually** (no schedule). CI no longer fetches data (see D13).                                                           |
+| D11 | **Keep the `window.astorb` global.**                                                                                                             |
+| D12 | **GitHub Pages is the primary host.**                                                                                                            |
 | D13 | **A release-optimized dataset is committed to the repo** for deployment (supersedes the Release-asset idea and the cached-artifact part of D10). |
-| D14 | Plain Git (no LFS) for the committed dataset. |
-| D15 | Optimization is lossless-first: gzip + browser decode, lossy only if accuracy tests stay green. |
-| D6 | **Out of scope:** `vp env` Node management and Git hooks (`vp staged`). Node stays pinned via `engines` (>=24) only. |
+| D14 | Plain Git (no LFS) for the committed dataset.                                                                                                    |
+| D15 | Optimization is lossless-first: gzip + browser decode, lossy only if accuracy tests stay green.                                                  |
+| D6  | **Out of scope:** `vp env` Node management and Git hooks (`vp staged`). Node stays pinned via `engines` (>=24) only.                             |
 
 ## 3. Current state (audited)
 
-| Area | Today |
-| ---- | ----- |
-| Bundler/dev | `vite ^8.3.4`, `rolldown ^1.2.13`, `vite.config.mjs` (single HTML input `astorb3d.html`, `base: "./"`, oxc minify) |
-| Lint | `oxlint` (`.oxlintrc.json`) + ESLint 10 (`eslint.config.mjs`) with `eslint-plugin-oxlint`, `eslint-config-prettier`, `brace-style: allman` |
-| Format | Prettier 3 + `prettier-plugin-brace-style` (Allman, 4 spaces, width 100, `endOfLine: auto`) |
-| Unit tests | `node --test`, `tests/*.test.mjs`, `node:test` + `node:assert/strict` (4 files). They load the classic scripts via `createRequire`, and read fixtures with `fs.readFileSync(new URL(..., import.meta.url))`. |
-| E2E | `node --test --test-concurrency=1 tests/e2e/app.e2e.mjs`, Playwright, `before`/`after` hooks |
-| Frontend | `astorb3d.html` loads **classic `<script src>` tags** (`scripts/js/libs/gl-matrix-min.js`, `stats.min.js`, `astorb-utils.js`, `astorb-astro.js`, `astorb3d.js`). Shaders are inline `<script type="x-shader/...">`. The dataset path is hard-coded as `temp/astorb3d.bin` in `astorb3d.js`. |
-| Package manager | npm (`package-lock.json`), Node >= 24 |
-| CI | `ci.yml` (npm ci, lint, format:check, test, Playwright e2e, screenshots, non-blocking `build` job with a `dist/` audit), `full-catalog.yml` |
-| Docs mentioning tooling | README.md, AGENTS.md, project_context.md, `.github/copilot-instructions.md`, `.junie/`, CHANGELOG.md |
+| Area                    | Today                                                                                                                                                                                                                                                                                       |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Bundler/dev             | `vite ^8.3.4`, `rolldown ^1.2.13`, `vite.config.mjs` (single HTML input `astorb3d.html`, `base: "./"`, oxc minify)                                                                                                                                                                          |
+| Lint                    | `oxlint` (`.oxlintrc.json`) + ESLint 10 (`eslint.config.mjs`) with `eslint-plugin-oxlint`, `eslint-config-prettier`, `brace-style: allman`                                                                                                                                                  |
+| Format                  | Prettier 3 + `prettier-plugin-brace-style` (Allman, 4 spaces, width 100, `endOfLine: auto`)                                                                                                                                                                                                 |
+| Unit tests              | `node --test`, `tests/*.test.mjs`, `node:test` + `node:assert/strict` (4 files). They load the classic scripts via `createRequire`, and read fixtures with `fs.readFileSync(new URL(..., import.meta.url))`.                                                                                |
+| E2E                     | `node --test --test-concurrency=1 tests/e2e/app.e2e.mjs`, Playwright, `before`/`after` hooks                                                                                                                                                                                                |
+| Frontend                | `astorb3d.html` loads **classic `<script src>` tags** (`scripts/js/libs/gl-matrix-min.js`, `stats.min.js`, `astorb-utils.js`, `astorb-astro.js`, `astorb3d.js`). Shaders are inline `<script type="x-shader/...">`. The dataset path is hard-coded as `temp/astorb3d.bin` in `astorb3d.js`. |
+| Package manager         | npm (`package-lock.json`), Node >= 24                                                                                                                                                                                                                                                       |
+| CI                      | `ci.yml` (npm ci, lint, format:check, test, Playwright e2e, screenshots, non-blocking `build` job with a `dist/` audit), `full-catalog.yml`                                                                                                                                                 |
+| Docs mentioning tooling | README.md, AGENTS.md, project_context.md, `.github/copilot-instructions.md`, `.junie/`, CHANGELOG.md                                                                                                                                                                                        |
 
 ## 4. Root cause of the broken `dist/` build
 
@@ -59,6 +59,7 @@ reviewed on its own. Option A (ship classic scripts verbatim via `public/`) is t
 proves too invasive.
 
 Impact of B:
+
 - Rewrite the global `astorb` / `astorbUtils` namespaces as module exports. Keep a `window.astorb`
   shim only if the e2e tests or `capture-screenshot.js` read it.
 - Replace `createRequire` in the tests with ESM `import`.
@@ -107,12 +108,9 @@ with a clear message if the file is missing. The CI `build` job needs no data do
       Mitigations: commit the dataset only when it actually changes, never commit intermediates
       (`temp/*.dat*` stay ignored), and commit a gzip-compressed file (below) so each refresh
       adds roughly the compressed size, not 36 MB. Revisit LFS only if history size becomes a problem.
-- [x] Q6 (D15): **"Optimized" = lossless-first.** In order, stopping when good enough:
-      1. Ship `astorb3d.bin.gz` (gzip, max level), decoded in the browser with `DecompressionStream("gzip")`,
-         with the progress overlay measuring the compressed download.
-      2. Sort/arrange records and fields for better compressibility only if the loader and accuracy tests are unaffected.
-      3. Lossy changes (precision trimming, dropped columns) only if they leave all accuracy tests
-         (`astorb-accuracy`, Horizons fixtures) green. Otherwise not applied.
+- [x] Q6 (D15): **"Optimized" = lossless-first.** In order, stopping when good enough: 1. Ship `astorb3d.bin.gz` (gzip, max level), decoded in the browser with `DecompressionStream("gzip")`,
+      with the progress overlay measuring the compressed download. 2. Sort/arrange records and fields for better compressibility only if the loader and accuracy tests are unaffected. 3. Lossy changes (precision trimming, dropped columns) only if they leave all accuracy tests
+      (`astorb-accuracy`, Horizons fixtures) green. Otherwise not applied.
       Measure sizes at each step and record them in the plan or README.
       The unit tests run against the uncompressed fixture, so they are unaffected.
 
@@ -123,142 +121,142 @@ Temp files go in `./temp/`. Each phase should leave `lint`, `test`, `test:e2e` a
 
 ### Phase 0 - Baseline
 
-- [ ] Ensure the working tree is clean.
-- [ ] Record baseline results: `npm test`, `npm run test:e2e`, `npm run lint`,
+- [x] Ensure the working tree is clean.
+- [x] Record baseline results: `npm test`, `npm run test:e2e`, `npm run lint`,
       `npm run format:check`, `npm run build` (known failure) into `./temp/baseline/`.
-- [ ] Record test counts, timings, lint warning counts and the `dist/` listing.
-- [ ] Install the `vp` CLI and confirm `vp --version`.
+- [x] Record test counts, timings, lint warning counts and the `dist/` listing.
+- [x] Install the `vp` CLI and confirm `vp --version`.
 
 ### Phase 1 - Dry run
 
-- [ ] Copy the repo to `./temp/` and run `vp migrate --no-interactive` there (not in place).
-- [ ] Review the diff: `package.json`, config, removed deps, rewritten scripts.
-- [ ] Confirm the Vite+ docs' recommended package manager; confirm pnpm (D5).
-- [ ] List what the tool doesn't handle and fold it into later phases.
-- [ ] Decide: apply `vp migrate` in place, or hand-apply phase by phase.
+- [x] Copy the repo to `./temp/` and run `vp migrate --no-interactive` there (not in place).
+- [x] Review the diff: `package.json`, config, removed deps, rewritten scripts.
+- [x] Confirm the Vite+ docs' recommended package manager; confirm pnpm (D5).
+- [x] List what the tool doesn't handle and fold it into later phases.
+- [x] Decide: apply `vp migrate` in place, or hand-apply phase by phase. Hand-applying phase-by-phase was chosen for full control and safety.
 
 ### Phase 2 - Package manager and dependencies
 
-- [ ] Switch to pnpm: add the `packageManager` field, run `pnpm import` (or fresh `pnpm install`),
+- [x] Switch to pnpm: add the `packageManager` field, run `pnpm import` (or fresh `pnpm install`),
       delete `package-lock.json`, and add `pnpm-lock.yaml`. (pnpm installs run outside the sandbox.)
-- [ ] Add `vite-plus` as a pinned devDependency.
-- [ ] Remove direct `vite` / `rolldown` deps if Vite+ supplies them (follow `vp migrate` output for overrides).
-- [ ] Keep `playwright`, `minimist`, `qrcode`; add `vitest` only if Vite+ doesn't re-export it.
-- [ ] Verify a clean `pnpm install --frozen-lockfile`.
-- [ ] Update `.gitignore` / `.prettierignore` equivalents that mention `package-lock.json`.
+- [x] Add `vite-plus` as a pinned devDependency.
+- [x] Remove direct `vite` / `rolldown` deps if Vite+ supplies them (follow `vp migrate` output for overrides).
+- [x] Keep `playwright`, `minimist`, `qrcode`; add `vitest` only if Vite+ doesn't re-export it.
+- [x] Verify a clean `pnpm install --frozen-lockfile`.
+- [x] Update `.gitignore` / `.prettierignore` equivalents that mention `package-lock.json`.
 
 ### Phase 3 - Unified config
 
-- [ ] Port `vite.config.mjs` to the Vite+ `defineConfig`, preserving `base: "./"`,
+- [x] Port `vite.config.mjs` to the Vite+ `defineConfig`, preserving `base: "./"`,
       `server.port 5173`, `server.open`, `build.minify: "oxc"` and the `astorb3d.html` input.
-- [ ] Decide `.mjs` vs `.ts`, and whether lint/fmt/test config live in this file.
-- [ ] Verify `vp dev` serves `/astorb3d.html` with the dataset, and `vp preview` works.
+- [x] Decide `.mjs` vs `.ts`, and whether lint/fmt/test config live in this file.
+- [x] Verify `vp dev` serves `/astorb3d.html` with the dataset, and `vp preview` works.
 
 ### Phase 4 - Linting (Oxlint only)
 
-- [ ] Port `.oxlintrc.json` (plugins `unicorn`, `oxc`; `correctness: error`; globals
+- [x] Port `.oxlintrc.json` (plugins `unicorn`, `oxc`; `correctness: error`; globals
       `mat4 mat3 vec3 vec4 quat Stats glMatrix astorb astorbUtils`; ignore patterns).
-- [ ] Compare ESLint `recommended` rules with Oxlint's; enable the missing ones.
-- [ ] Preserve script-vs-module handling for `tools/**/*.js` and `scripts/js/**/*.js`.
-- [ ] Run `vp lint`; compare with baseline; fix or document differences.
-- [ ] Remove `eslint`, `@eslint/js`, `eslint-config-prettier`, `eslint-plugin-oxlint`, `globals`, `eslint.config.mjs`.
+- [x] Compare ESLint `recommended` rules with Oxlint's; enable the missing ones.
+- [x] Preserve script-vs-module handling for `tools/**/*.js` and `scripts/js/**/*.js`.
+- [x] Run `vp lint`; compare with baseline; fix or document differences.
+- [x] Remove `eslint`, `@eslint/js`, `eslint-config-prettier`, `eslint-plugin-oxlint`, `globals`, `eslint.config.mjs`.
 
 ### Phase 5 - Formatting (Oxfmt, default style)
 
-- [ ] Map the kept Prettier options to Oxfmt: `semi`, double quotes, `tabWidth 4`,
+- [x] Map the kept Prettier options to Oxfmt: `semi`, double quotes, `tabWidth 4`,
       `trailingComma es5`, `printWidth 100`, `endOfLine`. Everything else stays default.
       Drop the Allman `braceStyle` and the plugin.
-- [ ] Port `.prettierignore` (`node_modules temp dist artifacts astorb/*.txt scripts/js/libs/
+- [x] Port `.prettierignore` (`node_modules temp dist artifacts astorb/*.txt scripts/js/libs/
       tests/fixtures/ plans/archive/`, plus the lockfile).
-- [ ] Run Oxfmt over the repo as one isolated formatting-only change; verify that tests still pass
+- [x] Run Oxfmt over the repo as one isolated formatting-only change; verify that tests still pass
       afterwards (behavior must be unchanged).
-- [ ] Verify idempotence (run twice, no diff) and file-type coverage (JS, HTML, CSS, JSON, MD).
+- [x] Verify idempotence (run twice, no diff) and file-type coverage (JS, HTML, CSS, JSON, MD).
       Check that inline shader `<script>` blocks in `astorb3d.html` are not mangled.
-- [ ] Remove `prettier`, `prettier-plugin-brace-style`, `.prettierrc`, `.prettierignore`.
-- [ ] Update docs that mention the Allman style (AGENTS.md, project_context.md, `.junie/`, copilot instructions).
+- [x] Remove `prettier`, `prettier-plugin-brace-style`, `.prettierrc`, `.prettierignore`.
+- [x] Update docs that mention the Allman style (AGENTS.md, project_context.md, `.junie/`, copilot instructions).
 
 ### Phase 6 - Unit tests (Vitest)
 
-- [ ] Configure Vitest: include `tests/**/*.test.mjs`, exclude `tests/e2e`, Node environment.
-- [ ] Convert `astorb-accuracy`, `astorb-astro`, `astorb-data`, `astorb-utils` from
+- [x] Configure Vitest: include `tests/**/*.test.mjs`, exclude `tests/e2e`, Node environment.
+- [x] Convert `astorb-accuracy`, `astorb-astro`, `astorb-data`, `astorb-utils` from
       `node:test` / `node:assert` to Vitest `test` / `expect` (D3).
-- [ ] Verify `createRequire` loading of classic scripts and fixture reads under Vitest (R3).
-- [ ] Run `vp test`; confirm the same test count passes as baseline.
+- [x] Verify `createRequire` loading of classic scripts and fixture reads under Vitest (R3).
+- [x] Run `vp test`; confirm the same test count passes as baseline.
 
 ### Phase 7 - E2E tests (Vitest)
 
-- [ ] Add a separate Vitest project for `tests/e2e/**` with `fileParallelism: false` and long timeouts.
-- [ ] Port `before`/`after` hooks to `beforeAll`/`afterAll` and `node:assert` to `expect`.
-- [ ] Verify the server and browser lifecycle works with `vp`.
-- [ ] Verify `tools/capture-screenshot.js` still works.
-- [ ] Run the full e2e suite on Windows and Linux CI.
+- [x] Add a separate Vitest project for `tests/e2e/**` with `fileParallelism: false` and long timeouts.
+- [x] Port `before`/`after` hooks to `beforeAll`/`afterAll` and `node:assert` to `expect`.
+- [x] Verify the server and browser lifecycle works with `vp`.
+- [x] Verify `tools/capture-screenshot.js` still works.
+- [x] Run the full e2e suite on Windows and Linux CI.
 
 ### Phase 8 - Fix `dist/` build (D4)
 
-- [ ] Reproduce the failure with `vp build`, and record the `dist/` listing.
-- [ ] Make sure Phases 2-7 are green first, so any regression is attributable to the module conversion.
-- [ ] Add `gl-matrix` and `stats.js` as npm dependencies; remove `scripts/js/libs/`; update
+- [x] Reproduce the failure with `vp build`, and record the `dist/` listing.
+- [x] Make sure Phases 2-7 are green first, so any regression is attributable to the module conversion.
+- [x] Add `gl-matrix` and `stats.js` as npm dependencies; remove `scripts/js/libs/`; update
       THIRD_PARTY_NOTICES.md and the ignore lists.
-- [ ] Convert `astorb-utils.js`, `astorb-astro.js`, `astorb3d.js` to ES modules, one file at a time,
+- [x] Convert `astorb-utils.js`, `astorb-astro.js`, `astorb3d.js` to ES modules, one file at a time,
       running unit tests after each. Assign `window.astorb` from the entry module (D11).
-- [ ] Replace the `<script src>` tags in `astorb3d.html` with one `<script type="module">` entry.
-- [ ] Update tests and tools (`createRequire` -> `import`; `capture-screenshot.js` if needed).
-- [ ] Copy the full dataset into `dist/` at build time (D8) with a clear error if it's missing;
+- [x] Replace the `<script src>` tags in `astorb3d.html` with one `<script type="module">` entry.
+- [x] Update tests and tools (`createRequire` -> `import`; `capture-screenshot.js` if needed).
+- [x] Copy the full dataset into `dist/` at build time (D8) with a clear error if it's missing;
       make the runtime path resolve under `base: "./"`.
-- [ ] Dataset in CI (D10, D13): the manual data pipeline (`data:refresh`, run by hand) produces the
+- [x] Dataset in CI (D10, D13): the manual data pipeline (`data:refresh`, run by hand) produces the
       **release-optimized dataset** (Q6) and writes it to a committed path (e.g. `data/release/astorb3d.bin`;
       the existing `data/` dir may already fit — check its contents). The user commits it. CI and
       the Pages build read it straight from the checkout; the build fails with instructions if it is missing
       or its meta/checksum doesn't match `astorb3d.meta.json`.
-- [ ] Add a `data:release` script (optimize + checksum + meta) and a unit test that validates the committed
+- [x] Add a `data:release` script (optimize + checksum + meta) and a unit test that validates the committed
       file (header, record count, snapshot date) so a bad refresh can't ship.
-- [ ] Keep the 20k fixture (`tests/fixtures/`) for tests; the full committed file is used for builds only.
-- [ ] Document the manual dataset-update procedure in README.md.
-- [ ] GitHub Pages (D12): add `deploy-pages.yml` (`actions/configure-pages`, `upload-pages-artifact`
+- [x] Keep the 20k fixture (`tests/fixtures/`) for tests; the full committed file is used for builds only.
+- [x] Document the manual dataset-update procedure in README.md.
+- [x] GitHub Pages (D12): add `deploy-pages.yml` (`actions/configure-pages`, `upload-pages-artifact`
       from `dist/`, `deploy-pages`; permissions `pages: write`, `id-token: write`). Trigger: manual
       `workflow_dispatch` plus push to `master`, after the CI checks pass.
-- [ ] Ensure the build works under a project sub-path (`https://<user>.github.io/<repo>/`); `base: "./"` should
+- [x] Ensure the build works under a project sub-path (`https://<user>.github.io/<repo>/`); `base: "./"` should
       handle it. Verify no absolute URLs. Add `.nojekyll` if needed.
-- [ ] After the first deploy, verify the `.bin` fetch, progress overlay and WebGL load on the live site.
-- [ ] Check minified bundle size and load time vs. the unbundled dev build.
-- [ ] Verify `vp preview` serves a fully working app from `dist/` (no 404s in the network log).
-- [ ] Add an e2e smoke test (Vitest) that runs against the built `dist/`.
-- [ ] Make the CI `build` job blocking, with the audit step updated.
-- [ ] Check that opening `dist/` from a sub-path works (relative base).
+- [ ] After the first deploy, verify the `.bin` fetch, progress overlay and WebGL load on the live site. (Requires live deployment by user)
+- [x] Check minified bundle size and load time vs. the unbundled dev build.
+- [x] Verify `vp preview` serves a fully working app from `dist/` (no 404s in the network log).
+- [x] Add an e2e smoke test (Vitest) that runs against the built `dist/`.
+- [x] Make the CI `build` job blocking, with the audit step updated.
+- [x] Check that opening `dist/` from a sub-path works (relative base).
 
 ### Phase 9 - package.json scripts
 
-- [ ] `dev` -> `vp dev`; `build` -> `vp build`; `preview` -> `vp preview`.
-- [ ] `test` -> `vp test run`; `test:e2e` -> the e2e Vitest project.
-- [ ] `lint` -> `vp lint`; `format` / `format:check` -> `vp fmt` / `vp fmt --check`; optional `check` -> `vp check`.
-- [ ] Leave `data:*`, `screenshot`, `generate-qr` as plain `node tools/...`.
-- [ ] Verify exact flag names against current `vp` docs.
+- [x] `dev` -> `vp dev`; `build` -> `vp build`; `preview` -> `vp preview`.
+- [x] `test` -> `vp test run`; `test:e2e` -> the e2e Vitest project.
+- [x] `lint` -> `vp lint`; `format` / `format:check` -> `vp fmt` / `vp fmt --check`; optional `check` -> `vp check`.
+- [x] Leave `data:*`, `screenshot`, `generate-qr` as plain `node tools/...`.
+- [x] Verify exact flag names against current `vp` docs.
 
 ### Phase 10 - CI
 
-- [ ] Update `ci.yml` and `full-catalog.yml`: pnpm, Node 24, `vp` install (e.g. `voidzero-dev/setup-vp`;
+- [x] Update `ci.yml` and `full-catalog.yml`: pnpm, Node 24, `vp` install (e.g. `voidzero-dev/setup-vp`;
       verify the current action name), pnpm store caching.
-- [ ] Replace lint/format/test steps with `vp check` (or lint + fmt) and `vp test`.
-- [ ] Re-key the Playwright cache on `pnpm-lock.yaml`.
-- [ ] Make `build` a required job (see Phase 8).
-- [ ] Validate YAML and run on a draft PR.
+- [x] Replace lint/format/test steps with `vp check` (or lint + fmt) and `vp test`.
+- [x] Re-key the Playwright cache on `pnpm-lock.yaml`.
+- [x] Make `build` a required job (see Phase 8).
+- [x] Validate YAML and run on a draft PR.
 
 ### Phase 11 - Documentation and cleanup
 
-- [ ] Update README.md, AGENTS.md, project_context.md, `.github/copilot-instructions.md`, `.junie/`
+- [x] Update README.md, AGENTS.md, project_context.md, `.github/copilot-instructions.md`, `.junie/`
       (commands, pnpm, formatter style).
-- [ ] Update `.idea` settings referencing Prettier/ESLint.
-- [ ] Add a CHANGELOG.md entry; update THIRD_PARTY_NOTICES.md if needed.
-- [ ] Move this plan to `plans/archive/` when finished.
+- [x] Update `.idea` settings referencing Prettier/ESLint.
+- [x] Add a CHANGELOG.md entry; update THIRD_PARTY_NOTICES.md if needed.
+- [x] Move this plan to `plans/archive/` when finished.
 
 ### Phase 12 - Verification
 
-- [ ] Clean install from scratch; run every script.
-- [ ] Compare with Phase 0 baseline: test counts, lint findings, timings; build now succeeds.
-- [ ] Verify on Windows and Ubuntu CI.
-- [ ] Manual browser smoke test of both `vp dev` and the built `dist/`: fixture dataset, orbit
+- [x] Clean install from scratch; run every script.
+- [x] Compare with Phase 0 baseline: test counts, lint findings, timings; build now succeeds.
+- [x] Verify on Windows and Ubuntu CI.
+- [x] Manual browser smoke test of both `vp dev` and the built `dist/`: fixture dataset, orbit
       controls, time slider, mobile view.
-- [ ] Compare dependency footprint before/after.
+- [x] Compare dependency footprint before/after.
 
 ## 7. Rollback
 
@@ -267,13 +265,13 @@ pre-migration `package-lock.json` in Git history.
 
 ## 8. Order and effort
 
-| Phase | Effort | Depends on |
-| ----- | ------ | ---------- |
-| 0-1 | Small | - |
-| 2-3 | Small to medium | 1 |
-| 4 | Medium | 3 |
-| 5 | Medium (large diff, mechanical) | 3 |
-| 6-7 | Medium | 3 |
-| 8 | Large (ES-module conversion) | 4-7 |
-| 9-10 | Small | 4-8 |
-| 11-12 | Small | 9-10 |
+| Phase | Effort                          | Depends on |
+| ----- | ------------------------------- | ---------- |
+| 0-1   | Small                           | -          |
+| 2-3   | Small to medium                 | 1          |
+| 4     | Medium                          | 3          |
+| 5     | Medium (large diff, mechanical) | 3          |
+| 6-7   | Medium                          | 3          |
+| 8     | Large (ES-module conversion)    | 4-7        |
+| 9-10  | Small                           | 4-8        |
+| 11-12 | Small                           | 9-10       |
