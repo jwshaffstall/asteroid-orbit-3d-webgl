@@ -16,31 +16,38 @@ jobs:
         steps:
             - uses: actions/checkout@v7
 
+            - name: Install pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  run_install: false
+
             - uses: actions/setup-node@v7
               with:
                   node-version: 24
-                  cache: npm
+                  cache: pnpm
 
-            - run: npm ci
-            - run: npm run lint
-            - run: npm run format:check
-            - run: npm test
+            - name: Install vp
+              run: npm install -g vite-plus
+
+            - run: pnpm install --frozen-lockfile
+            - run: pnpm run check
+            - run: pnpm test
 
             - name: Cache Playwright browsers
               uses: actions/cache@v6
               with:
                   path: ~/.cache/ms-playwright
-                  key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+                  key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
-            - run: npx playwright install --with-deps chromium
+            - run: pnpm exec playwright install --with-deps chromium
 
             - name: Browser tests (fixture dataset)
-              run: npm run test:e2e
+              run: pnpm run test:e2e
 
             - name: Smoke screenshots (fixture dataset)
               run: |
-                  npm run screenshot -- --output artifacts/desktop.png --query "data=tests/fixtures/astorb-fixture.bin&t=0&cam=0,20,12&paused=1"
-                  npm run screenshot -- --mobile --output artifacts/mobile.png --query "data=tests/fixtures/astorb-fixture.bin&t=0&paused=1"
+                  pnpm run screenshot -- --output artifacts/desktop.png --query "data=tests/fixtures/astorb-fixture.bin&t=0&cam=0,20,12&paused=1"
+                  pnpm run screenshot -- --mobile --output artifacts/mobile.png --query "data=tests/fixtures/astorb-fixture.bin&t=0&paused=1"
 
             - uses: actions/upload-artifact@v7
               if: always()
@@ -50,20 +57,29 @@ jobs:
                   if-no-files-found: ignore
 
     build:
-        # Known broken until Phase 8a: Vite can't bundle the classic scripts and doesn't copy
-        # the dataset, so dist/ is incomplete. The audit step proves it; the job may fail.
         runs-on: ubuntu-latest
-        continue-on-error: true
         steps:
             - uses: actions/checkout@v7
+
+            - name: Install pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  run_install: false
+
             - uses: actions/setup-node@v7
               with:
                   node-version: 24
-                  cache: npm
-            - run: npm ci
-            - run: npm run build
-            - name: Audit dist/ (expected to fail until Phase 8a)
+                  cache: pnpm
+
+            - name: Install vp
+              run: npm install -g vite-plus
+
+            - run: pnpm install --frozen-lockfile
+            - run: pnpm run build
+            - name: Audit dist/
               run: |
-                  ls -R dist
-                  test -f dist/temp/astorb3d.bin || { echo "dist/ has no dataset"; exit 1; }
+                  ls -laR dist
+                  test -f dist/data/release/astorb3d.bin || { echo "dist/ has no dataset"; exit 1; }
+                  test -f dist/data/release/astorb3d.meta.json || { echo "dist/ has no metadata"; exit 1; }
+                  test -f dist/.nojekyll || { echo "dist/ has no .nojekyll"; exit 1; }
                   test -n "$(ls dist/assets/*.js 2>/dev/null)" || { echo "dist/ has no scripts"; exit 1; }

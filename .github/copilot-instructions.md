@@ -6,21 +6,29 @@ This is a 3D WebGL visualization project that renders asteroid orbital elements 
 
 ## Technology Stack
 
-- **Frontend**: Pure JavaScript (ES5/ES6), WebGL, HTML5 Canvas
+- **Frontend**: Modern ES Modules, WebGL, HTML5 Canvas
 - **Graphics**: WebGL with GLSL shaders (vertex and fragment shaders)
-- **Math Library**: gl-matrix library for matrix operations
-- **Build Tools**: Node.js for tooling (screenshot capture, QR code generation)
-- **Dependencies**: Minimal dependencies - playwright (dev), minimist, qrcode
+- **Math Library**: `gl-matrix` from npm
+- **Performance Monitor**: `stats.js` from npm
+- **Toolchain**: Vite+ (`vp`) powered by Vite, Rolldown, Vitest, Oxlint, and Oxfmt
+- **Package Manager**: pnpm (`pnpm@12.16.1`)
+- **Dependencies**: Minimal dependencies - `gl-matrix`, `stats.js`, `playwright` (dev), `vite-plus` (dev), `minimist`, `qrcode`
 
 ## JavaScript Coding Standards
 
-### Code Style
+### Code Style and Formatting
 
-- Use consistent indentation (4 spaces observed in the codebase)
-- Use descriptive variable names (e.g., `semimajorAxis`, `eccentricity`, `inclination`)
-- Prefer explicit braces for all control structures
-- Use IIFE (Immediately Invoked Function Expression) pattern for scope isolation when appropriate
-- Use namespace pattern: `var astorb = astorb || {};` to avoid global pollution
+- Formatter: Oxfmt (via `pnpm run format` / `vp fmt`)
+- Indentation: 4 spaces
+- Double quotes, semicolons, standard 1TBS brace style
+- Line endings: LF
+- Linter: Oxlint (via `pnpm run lint` / `pnpm run check`)
+
+### Architecture and Modules
+
+- ES Modules: Use standard `import` / `export`
+- Public API / Debugging: Assign `window.astorb`, `window.astorbUtils`, `window.astorbAstro` from module entrypoints for runtime console inspection and e2e testing
+- Tests: Vitest (`import { test, expect } from "vite-plus/test"`)
 
 ### Naming Conventions
 
@@ -183,17 +191,23 @@ var astorb = astorb || {};
 ## File Organization
 
 - `astorb3d.html` - Main application HTML
-- `scripts/js/astorb3d.js` - Core WebGL and orbital mechanics logic
-- `scripts/js/libs/` - Third-party libraries
-- `tools/` - Build and development utilities (Node.js)
-- `scripts/python/` - Python utilities for data processing
-- `assets/` - Static assets (images, QR codes)
-- `astorb/` - Orbital data files
+- `scripts/js/astorb3d.js` - Core WebGL and orbital mechanics entry module
+- `scripts/js/astorb-utils.js` - Formatting, color helpers, and DOM UI utilities (ES module)
+- `scripts/js/astorb-astro.js` - Astronomical Kepler solvers and Julian Date routines (ES module)
+- `data/release/` - Committed release dataset (`astorb3d.bin` and `astorb3d.meta.json`)
+- `tests/` - Vitest unit tests and e2e tests
+- `tools/` - Node.js tooling for data pipelines, release verification, and screenshots
+- `assets/` - Static images, badges, and documentation assets
 
 ## Important Notes
 
-- This is a single-page application with no build step for the main app
+- Development server: `pnpm run dev` (powered by Vite+)
+- Production build: `pnpm run build` (Rolldown bundles JS into `dist/assets/`, copies dataset into `dist/data/release/`)
+- Production preview: `pnpm run preview`
+- Linting and formatting: `pnpm run check` (Oxlint + Oxfmt)
 - All calculations happen in real-time on the GPU via shaders
-- The application handles large datasets (~1M asteroids) efficiently
+- The application handles large datasets (~1.5M asteroids) efficiently
+- Focus on maintaining performance while adding features
+- Preserve the existing visual design and user experience
 - Focus on maintaining performance while adding features
 - Preserve the existing visual design and user experience

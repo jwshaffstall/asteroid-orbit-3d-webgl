@@ -14,19 +14,34 @@ jobs:
         steps:
             - uses: actions/checkout@v7
 
+            - name: Install pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  run_install: false
+
             - uses: actions/setup-node@v7
               with:
                   node-version: 24
-                  cache: npm
+                  cache: pnpm
 
-            - run: npm ci
-            - run: npx playwright install --with-deps chromium
+            - name: Install vp
+              run: npm install -g vite-plus
+
+            - run: pnpm install --frozen-lockfile
+
+            - name: Cache Playwright browsers
+              uses: actions/cache@v6
+              with:
+                  path: ~/.cache/ms-playwright
+                  key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+            - run: pnpm exec playwright install --with-deps chromium
 
             - name: Full-catalog screenshots
               run: |
-                  npm run screenshot -- --output artifacts/full-desktop.png --query "t=0&cam=0,20,12&paused=1"
-                  npm run screenshot -- --output artifacts/full-top-down.png --query "t=0&cam=0,80,8&paused=1&color=4"
-                  npm run screenshot -- --mobile --output artifacts/full-mobile.png --query "t=0&paused=1"
+                  pnpm run screenshot -- --output artifacts/full-desktop.png --query "t=0&cam=0,20,12&paused=1"
+                  pnpm run screenshot -- --output artifacts/full-top-down.png --query "t=0&cam=0,80,8&paused=1&color=4"
+                  pnpm run screenshot -- --mobile --output artifacts/full-mobile.png --query "t=0&paused=1"
 
             - uses: actions/upload-artifact@v7
               if: always()
