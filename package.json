@@ -20,7 +20,11 @@
         "data:release": "node tools/data-release.mjs",
         "data:fixture": "node tools/build-fixture.js -i temp/2026-10-30-astorb.dat.gz -o tests/fixtures/astorb-fixture.bin --snapshot-date 2026-10-30",
         "data:horizons": "node tools/horizons-fixtures.mjs",
-        "generate-qr": "node tools/generate-qr.js"
+        "generate-qr": "node tools/generate-qr.js",
+        "deps:install": "pnpm install",
+        "deps:update": "pnpm update",
+        "deps:audit": "pnpm audit",
+        "deps:audit:fix": "pnpm audit --fix"
     },
     "dependencies": {
         "gl-matrix": "^3.4.4",
