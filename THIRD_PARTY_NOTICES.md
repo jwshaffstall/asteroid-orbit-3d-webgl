@@ -2,9 +2,9 @@
 
 astorb3d itself is released into the public domain (see `LICENSE.txt`). It bundles the following third-party code, which keeps its own license.
 
-## gl-matrix 2.2.0
+## gl-matrix 3.4.4
 
-`scripts/js/libs/gl-matrix-min.js` — <https://github.com/toji/gl-matrix>
+npm package `gl-matrix` — <https://github.com/toji/gl-matrix>
 
 Copyright (c) 2013, Brandon Jones, Colin MacKenzie IV. All rights reserved.
 
@@ -17,7 +17,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 ## stats.js
 
-`scripts/js/libs/stats.min.js` — <https://github.com/mrdoob/stats.js>
+npm package `stats.js` — <https://github.com/mrdoob/stats.js>
 
 The MIT License. Copyright (c) 2009–2016 stats.js authors (mrdoob and contributors).
 
